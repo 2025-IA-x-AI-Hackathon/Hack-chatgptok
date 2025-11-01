@@ -10,7 +10,7 @@ const options = {
         },
         servers: [
             {
-                url: 'http://localhost:5001',
+                url: 'http://localhost:8000',
                 description: '개발 서버',
             },
             {
