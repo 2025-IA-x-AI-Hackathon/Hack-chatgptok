@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input"
 import { Field, FieldLabel } from "@/components/ui/field"
 import { Separator } from "@/components/ui/separator"
+import { toast } from "sonner"
 
 export function ProfileForm() {
   const [profileImage, setProfileImage] = useState<string>("/placeholder-avatar.jpg")
@@ -46,10 +47,10 @@ export function ProfileForm() {
       // })
 
       console.log("이름 변경:", name)
-      alert("이름이 성공적으로 변경되었습니다!")
+      toast.success("이름이 성공적으로 변경되었습니다!")
     } catch (error) {
       console.error("이름 변경 실패:", error)
-      alert("이름 변경에 실패했습니다.")
+      toast.error("이름 변경에 실패했습니다.")
     } finally {
       setIsLoading(false)
     }
@@ -59,12 +60,12 @@ export function ProfileForm() {
     e.preventDefault()
 
     if (newPassword !== confirmPassword) {
-      alert("새 비밀번호가 일치하지 않습니다.")
+      toast.error("새 비밀번호가 일치하지 않습니다.")
       return
     }
 
     if (newPassword.length < 8) {
-      alert("비밀번호는 최소 8자 이상이어야 합니다.")
+      toast.error("비밀번호는 최소 8자 이상이어야 합니다.")
       return
     }
 
@@ -79,13 +80,13 @@ export function ProfileForm() {
       // })
 
       console.log("비밀번호 변경 요청")
-      alert("비밀번호가 성공적으로 변경되었습니다!")
+      toast.success("비밀번호가 성공적으로 변경되었습니다!")
       setCurrentPassword("")
       setNewPassword("")
       setConfirmPassword("")
     } catch (error) {
       console.error("비밀번호 변경 실패:", error)
-      alert("비밀번호 변경에 실패했습니다.")
+      toast.error("비밀번호 변경에 실패했습니다.")
     } finally {
       setIsLoading(false)
     }
@@ -104,10 +105,10 @@ export function ProfileForm() {
       // })
 
       console.log("프로필 이미지 업로드")
-      alert("프로필 사진이 성공적으로 변경되었습니다!")
+      toast.success("프로필 사진이 성공적으로 변경되었습니다!")
     } catch (error) {
       console.error("이미지 업로드 실패:", error)
-      alert("프로필 사진 변경에 실패했습니다.")
+      toast.error("프로필 사진 변경에 실패했습니다.")
     } finally {
       setIsLoading(false)
     }
