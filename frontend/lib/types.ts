@@ -59,7 +59,7 @@ export interface Product {
 }
 
 export interface ProductDetail extends Product {
-    images?: string[];
+    images: string[];
 }
 
 export interface ProductListResponse {

@@ -373,7 +373,7 @@ export const userApi = {
      * 프로필 조회
      */
     getProfile: async (): Promise<ApiResponse<User>> => {
-        return apiRequest<User>("/users/profile", { method: "GET" });
+        return apiRequest<User>("/users/me", { method: "GET" }, true);
     },
 
     /**
@@ -587,7 +587,8 @@ export const chatApi = {
             {
                 method: "POST",
                 body: JSON.stringify(data),
-            }
+            },
+            true
         );
     },
 
@@ -599,7 +600,7 @@ export const chatApi = {
             "/chat/rooms",
             {
                 method: "GET",
-            }
+            },true
         );
     },
 
@@ -613,7 +614,8 @@ export const chatApi = {
             `/chat/rooms/${chatRoomId}`,
             {
                 method: "GET",
-            }
+            },
+            true
         );
     },
 
@@ -627,7 +629,8 @@ export const chatApi = {
             `/chat/rooms/${chatRoomId}/messages`,
             {
                 method: "GET",
-            }
+            },
+            true
         );
     },
 
@@ -643,7 +646,8 @@ export const chatApi = {
             {
                 method: "POST",
                 body: JSON.stringify(data),
-            }
+            },
+            true
         );
     },
 
@@ -657,7 +661,8 @@ export const chatApi = {
             `/chat/rooms/${chatRoomId}/read`,
             {
                 method: "POST",
-            }
+            },
+            true
         );
     },
 };
