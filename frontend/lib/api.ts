@@ -358,6 +358,12 @@ export const authApi = {
             }
         );
     },
+
+    getMe: async (): Promise<ApiResponse<{ user: User }>> => {
+        return apiRequest<{ user: User }>("/auth/me", {
+            method: "GET",
+        });
+    },
 };
 
 // ============ 사용자 API ============
@@ -569,6 +575,94 @@ export const uploadApi = {
     },
 };
 
+export const chatApi = {
+    /**
+     * 채팅방 생성 또는 조회
+     */
+    createOrGetChatRoom: async (
+        data: CreateChatRoomRequest
+    ): Promise<ApiResponse<{ data: ChatRoom }>> => {
+        return apiRequest<{ data: ChatRoom }>(
+            "/chat/rooms",
+            {
+                method: "POST",
+                body: JSON.stringify(data),
+            }
+        );
+    },
+
+    /**
+     * 채팅방 목록 조회
+     */
+    getChatRooms: async (): Promise<ApiResponse<{ data: ChatRoom[] }>> => {
+        return apiRequest<{ data: ChatRoom[] }>(
+            "/chat/rooms",
+            {
+                method: "GET",
+            }
+        );
+    },
+
+    /**
+     * 채팅방 상세 조회
+     */
+    getChatRoomDetail: async (
+        chatRoomId: string
+    ): Promise<ApiResponse<{ data: ChatRoomDetail }>> => {
+        return apiRequest<{ data: ChatRoomDetail }>(
+            `/chat/rooms/${chatRoomId}`,
+            {
+                method: "GET",
+            }
+        );
+    },
+
+    /**
+     * 메시지 목록 조회
+     */
+    getMessages: async (
+        chatRoomId: string
+    ): Promise<ApiResponse<{ data: ChatMessage[] }>> => {
+        return apiRequest<{ data: ChatMessage[] }>(
+            `/chat/rooms/${chatRoomId}/messages`,
+            {
+                method: "GET",
+            }
+        );
+    },
+
+    /**
+     * 메시지 전송
+     */
+    sendMessage: async (
+        chatRoomId: string,
+        data: SendMessageRequest
+    ): Promise<ApiResponse<{ data: ChatMessage }>> => {
+        return apiRequest<{ data: ChatMessage }>(
+            `/chat/rooms/${chatRoomId}/messages`,
+            {
+                method: "POST",
+                body: JSON.stringify(data),
+            }
+        );
+    },
+
+    /**
+     * 메시지 읽음 처리
+     */
+    markAsRead: async (
+        chatRoomId: string
+    ): Promise<ApiResponse<{ data: { count: number } }>> => {
+        return apiRequest<{ data: { count: number } }>(
+            `/chat/rooms/${chatRoomId}/read`,
+            {
+                method: "POST",
+            }
+        );
+    },
+};
+
+
 // ============ 기본 export ============
 
 export default {
@@ -578,4 +672,5 @@ export default {
     auth: authApi,
     user: userApi,
     upload: uploadApi,
+    chat: chatApi
 };
