@@ -2,6 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import session from 'express-session';
 import cookieParser from 'cookie-parser';
+import swaggerUi from 'swagger-ui-express';
 import routes from './routes/route.js';
 import rateLimitMiddleware from './middleware/rateLimitMiddleware.js';
 import timeoutMiddleware from './middleware/timeoutMiddleware.js';
@@ -11,6 +12,7 @@ import {
 } from './middleware/securityMiddleware.js';
 import dbConnectionMiddleware from './middleware/dbConnection.js';
 import sessionConfig from './config/session.js';
+import swaggerSpecs from './config/swagger.js';
 
 const app = express();
 
@@ -41,6 +43,9 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 app.use(session(sessionConfig));
+
+// Swagger UI
+app.use('/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpecs));
 
 // 라우터 적용
 app.use('/api/v1', routes);
