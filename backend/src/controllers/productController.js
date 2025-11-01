@@ -54,10 +54,10 @@ const ProductController = {
             await ProductModel.addProductImagesWithConnection(connection, productId, images);
 
             // 3. AI 상품 설명 자동 생성 큐 등록
-            await JobModel.createDescriptionJobWithConnection(connection, productId, name, images);
+            // await JobModel.createDescriptionJobWithConnection(connection, productId, name, images);
 
             // 4. 3DGS 작업 큐 등록
-            await JobModel.create3DGSJobWithConnection(connection, productId, images);
+            // await JobModel.create3DGSJobWithConnection(connection, productId, images);
 
             // 트랜잭션 커밋 (모든 작업 완료)
             await connection.commit();
