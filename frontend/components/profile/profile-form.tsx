@@ -89,10 +89,11 @@ export function ProfileForm() {
       return
     }
 
-    if (newPassword.length < 8) {
-      toast.error("비밀번호는 최소 8자 이상이어야 합니다.")
-      return
-    }
+    // 비밀번호 길이 검증 (개발용 비활성화)
+    // if (newPassword.length < 8) {
+    //   toast.error("비밀번호는 최소 8자 이상이어야 합니다.")
+    //   return
+    // }
 
     setIsLoading(true)
 
@@ -264,7 +265,7 @@ export function ProfileForm() {
                 onChange={(e) => setNewPassword(e.target.value)}
                 placeholder="새 비밀번호를 입력하세요 (최소 8자)"
                 required
-                minLength={8}
+                // minLength={8}
               />
             </Field>
             <Field>
@@ -276,7 +277,7 @@ export function ProfileForm() {
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 placeholder="새 비밀번호를 다시 입력하세요"
                 required
-                minLength={8}
+                // minLength={8}
               />
             </Field>
             <Button type="submit" disabled={isLoading}>

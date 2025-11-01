@@ -195,7 +195,7 @@ export default function ProductDetailPage() {
             setIsChatLoading(true);
 
             // 로그인 확인
-            const token = localStorage.getItem('accessToken');
+            const token = sessionStorage.getItem('accessToken');
             if (!token) {
                 toast.error("로그인이 필요합니다.");
                 router.push("/login");

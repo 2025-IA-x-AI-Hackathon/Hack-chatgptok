@@ -40,11 +40,11 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:4
 // ============ 헬퍼 함수 ============
 
 /**
- * 로컬 스토리지에서 JWT 토큰 가져오기
+ * 세션 스토리지에서 JWT 토큰 가져오기
  */
 function getAccessToken(): string | null {
     if (typeof window === 'undefined') return null;
-    return localStorage.getItem('accessToken');
+    return sessionStorage.getItem('accessToken');
 }
 
 /**
@@ -298,8 +298,8 @@ export const authApi = {
         if (response.success && response.data?.data) {
             const { accessToken, refreshToken } = response.data.data;
             if (typeof window !== 'undefined') {
-                localStorage.setItem('accessToken', accessToken);
-                localStorage.setItem('refreshToken', refreshToken);
+                sessionStorage.setItem('accessToken', accessToken);
+                sessionStorage.setItem('refreshToken', refreshToken);
             }
         }
 
@@ -319,8 +319,8 @@ export const authApi = {
         if (response.success && response.data?.data) {
             const { accessToken, refreshToken } = response.data.data;
             if (typeof window !== 'undefined') {
-                localStorage.setItem('accessToken', accessToken);
-                localStorage.setItem('refreshToken', refreshToken);
+                sessionStorage.setItem('accessToken', accessToken);
+                sessionStorage.setItem('refreshToken', refreshToken);
             }
         }
 
@@ -340,8 +340,8 @@ export const authApi = {
 
         // 로그아웃 시 토큰 삭제
         if (typeof window !== 'undefined') {
-            localStorage.removeItem('accessToken');
-            localStorage.removeItem('refreshToken');
+            sessionStorage.removeItem('accessToken');
+            sessionStorage.removeItem('refreshToken');
         }
 
         return response;
@@ -351,7 +351,7 @@ export const authApi = {
      * 토큰 갱신
      */
     refreshToken: async (): Promise<ApiResponse<{ accessToken: string }>> => {
-        const refreshToken = typeof window !== 'undefined' ? localStorage.getItem('refreshToken') : null;
+        const refreshToken = typeof window !== 'undefined' ? sessionStorage.getItem('refreshToken') : null;
 
         if (!refreshToken) {
             return {
@@ -371,7 +371,7 @@ export const authApi = {
         // 토큰 갱신 성공 시 새 액세스 토큰 저장
         if (response.success && response.data?.data?.accessToken) {
             if (typeof window !== 'undefined') {
-                localStorage.setItem('accessToken', response.data.data.accessToken);
+                sessionStorage.setItem('accessToken', response.data.data.accessToken);
             }
         }
 

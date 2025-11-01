@@ -44,10 +44,11 @@ export function SignupForm({
       return
     }
 
-    if (formData.password.length < 8) {
-      toast.error("비밀번호는 최소 8자 이상이어야 합니다.")
-      return
-    }
+    // 비밀번호 길이 검증 (개발용 비활성화)
+    // if (formData.password.length < 8) {
+    //   toast.error("비밀번호는 최소 8자 이상이어야 합니다.")
+    //   return
+    // }
 
     setLoading(true)
 

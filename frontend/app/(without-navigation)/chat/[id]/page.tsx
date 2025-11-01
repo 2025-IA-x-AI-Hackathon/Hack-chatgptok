@@ -38,6 +38,7 @@ export default function ChatRoom({
   const [error, setError] = useState<string | null>(null)
   const [isOtherUserTyping, setIsOtherUserTyping] = useState(false)
   const [connected, setConnected] = useState(false)
+  const hasInitialized = useRef(false)
 
   // 현재 사용자 정보 가져오기
   useEffect(() => {
@@ -52,12 +53,18 @@ export default function ChatRoom({
 
   // WebSocket 연결 및 채팅방 입장
   useEffect(() => {
+    // React Strict Mode에서 중복 초기화 방지
+    if (hasInitialized.current) {
+      return
+    }
+    hasInitialized.current = true
+
     const initializeChat = async () => {
       try {
         setLoading(true)
 
         // JWT 토큰 가져오기
-        const token = localStorage.getItem('accessToken')
+        const token = sessionStorage.getItem('accessToken')
         if (!token) {
           setError('로그인이 필요합니다.')
           return
@@ -83,16 +90,33 @@ export default function ChatRoom({
         // WebSocket 연결
         const socket = connectChatSocket(token)
 
-        socket.on('connect', () => {
+        socket.on('connect', async () => {
           setConnected(true)
+
+          // 연결 완료 후 채팅방 입장
+          try {
+            await joinChatRoom(Number(chatRoomId))
+            console.log('✅ 채팅방 입장 완료')
+          } catch (error) {
+            console.error('❌ 채팅방 입장 실패:', error)
+            setError('채팅방 입장에 실패했습니다.')
+          }
         })
 
         socket.on('disconnect', () => {
           setConnected(false)
         })
 
-        // 채팅방 입장
-        await joinChatRoom(Number(chatRoomId))
+        // 이미 연결된 상태라면 즉시 입장
+        if (socket.connected) {
+          try {
+            await joinChatRoom(Number(chatRoomId))
+            console.log('✅ 채팅방 입장 완료 (이미 연결됨)')
+          } catch (error) {
+            console.error('❌ 채팅방 입장 실패:', error)
+            setError('채팅방 입장에 실패했습니다.')
+          }
+        }
 
         // 새 메시지 수신
         onNewMessage((newMessage) => {
@@ -233,6 +257,11 @@ export default function ChatRoom({
 
   // Enter 키로 메시지 전송
   const handleKeyDown = (e: React.KeyboardEvent) => {
+    // 한글 입력 중(IME 조합 중)일 때는 Enter 이벤트 무시
+    if (e.nativeEvent.isComposing) {
+      return
+    }
+
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault()
       handleSendMessage()

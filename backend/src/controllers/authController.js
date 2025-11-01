@@ -24,13 +24,13 @@ const authController = {
                 });
             }
 
-            // 비밀번호 길이 검증
-            if (password.length < 6) {
-                return res.status(400).json({
-                    success: false,
-                    message: '비밀번호는 최소 6자 이상이어야 합니다.',
-                });
-            }
+            // 비밀번호 길이 검증 (개발용 비활성화)
+            // if (password.length < 6) {
+            //     return res.status(400).json({
+            //         success: false,
+            //         message: '비밀번호는 최소 6자 이상이어야 합니다.',
+            //     });
+            // }
 
             // 중복 체크
             const existingUser = await UserModel.findByEmail(email);
