@@ -52,7 +52,7 @@ export function SignupForm({
     setLoading(true)
 
     try {
-      const response = await authApi.signup({
+      const response = await authApi.register({
         nickname: formData.nickname,
         email: formData.email,
         password: formData.password,

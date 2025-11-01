@@ -2,9 +2,11 @@ import express from 'express';
 
 import userController from '../controllers/userController.js';
 import productController from '../controllers/productController.js';
+import authController from '../controllers/authController.js';
 
 // middleware
 import isAuthenticated from '../middleware/auth.js';
+import { authenticateToken } from '../middleware/authMiddleware.js';
 
 const router = express.Router();
 
@@ -33,97 +35,12 @@ router.get('/health', (req, res) => {
     res.json({ status: 'ok', message: 'Server is running' });
 });
 
-/**
- * @swagger
- * /api/v1/auth/signup:
- *   post:
- *     summary: 회원가입
- *     tags: [Auth]
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required:
- *               - email
- *               - password
- *               - username
- *             properties:
- *               email:
- *                 type: string
- *                 format: email
- *                 example: user@example.com
- *               password:
- *                 type: string
- *                 format: password
- *                 example: password123
- *               username:
- *                 type: string
- *                 example: johndoe
- *     responses:
- *       201:
- *         description: 회원가입 성공
- *       400:
- *         description: 잘못된 요청
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/Error'
- */
-router.post('/auth/signup', userController.signup);
-
-/**
- * @swagger
- * /api/v1/auth/login:
- *   post:
- *     summary: 로그인
- *     tags: [Auth]
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required:
- *               - email
- *               - password
- *             properties:
- *               email:
- *                 type: string
- *                 format: email
- *                 example: user@example.com
- *               password:
- *                 type: string
- *                 format: password
- *                 example: password123
- *     responses:
- *       200:
- *         description: 로그인 성공
- *       401:
- *         description: 인증 실패
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/Error'
- */
-router.post('/auth/login', userController.login);
-
-/**
- * @swagger
- * /api/v1/auth/logout:
- *   post:
- *     summary: 로그아웃
- *     tags: [Auth]
- *     security:
- *       - cookieAuth: []
- *     responses:
- *       200:
- *         description: 로그아웃 성공
- *       401:
- *         description: 인증 필요
- */
-router.post('/auth/logout', isAuthenticated, userController.logout);
+// Auth routes (JWT 기반)
+router.post('/auth/register', authController.register);
+router.post('/auth/login', authController.login);
+router.post('/auth/logout', authenticateToken, authController.logout);
+router.post('/auth/refresh', authController.refreshToken);
+router.get('/auth/me', authenticateToken, authController.getMe);
 
 /**
  * @swagger
@@ -143,7 +60,7 @@ router.post('/auth/logout', isAuthenticated, userController.logout);
  *       401:
  *         description: 인증 필요
  */
-router.get('/users/profile', isAuthenticated, userController.getProfile);
+router.get('/users/profile', authenticateToken, userController.getProfile);
 
 /**
  * @swagger
@@ -173,7 +90,7 @@ router.get('/users/profile', isAuthenticated, userController.getProfile);
  *       401:
  *         description: 인증 필요
  */
-router.put('/users/profile', isAuthenticated, userController.updateProfile);
+router.put('/users/profile', authenticateToken, userController.updateProfile);
 
 /**
  * @swagger
@@ -277,7 +194,7 @@ router.get('/products/:productId', productController.getProductById);
  *       401:
  *         description: 인증 필요
  */
-router.post('/products', isAuthenticated, productController.createProduct);
+router.post('/products', authenticateToken, productController.createProduct);
 
 /**
  * @swagger
@@ -317,7 +234,7 @@ router.post('/products', isAuthenticated, productController.createProduct);
  *       404:
  *         description: 상품을 찾을 수 없음
  */
-router.put('/products/:productId', isAuthenticated, productController.updateProduct);
+router.put('/products/:productId', authenticateToken, productController.updateProduct);
 
 /**
  * @swagger
@@ -342,7 +259,7 @@ router.put('/products/:productId', isAuthenticated, productController.updateProd
  *       404:
  *         description: 상품을 찾을 수 없음
  */
-router.delete('/products/:productId', isAuthenticated, productController.deleteProduct);
+router.delete('/products/:productId', authenticateToken, productController.deleteProduct);
 
 /**
  * @swagger
@@ -364,7 +281,7 @@ router.delete('/products/:productId', isAuthenticated, productController.deleteP
  *       401:
  *         description: 인증 필요
  */
-router.get('/my-products', isAuthenticated, productController.getMyProducts);
+router.get('/my-products', authenticateToken, productController.getMyProducts);
 
 /**
  * @swagger
@@ -387,7 +304,7 @@ router.get('/my-products', isAuthenticated, productController.getMyProducts);
  *       401:
  *         description: 인증 필요
  */
-router.post('/products/:productId/like', isAuthenticated, productController.likeProduct);
+router.post('/products/:productId/like', authenticateToken, productController.likeProduct);
 
 /**
  * @swagger
@@ -410,7 +327,7 @@ router.post('/products/:productId/like', isAuthenticated, productController.like
  *       401:
  *         description: 인증 필요
  */
-router.delete('/products/:productId/like', isAuthenticated, productController.unlikeProduct);
+router.delete('/products/:productId/like', authenticateToken, productController.unlikeProduct);
 
 // AI description generation route
 router.post('/products/ai/generate-description', productController.generateDescription);
