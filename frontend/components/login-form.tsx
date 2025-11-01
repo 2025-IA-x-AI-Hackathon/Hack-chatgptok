@@ -1,31 +1,44 @@
 "use client"
 
 import Image from "next/image"
-import { useState } from "react"
 import { useRouter } from "next/navigation"
+import { useForm } from "react-hook-form"
+import { zodResolver } from "@hookform/resolvers/zod"
+import { useMutation } from "@tanstack/react-query"
+import { toast } from "sonner"
+import { loginSchema, type LoginFormData } from "@/lib/schemas/auth"
+import { authApi } from "@/lib/api"
 
 export function LoginForm() {
   const router = useRouter()
-  const [email, setEmail] = useState("")
-  const [password, setPassword] = useState("")
-  const [isLoading, setIsLoading] = useState(false)
 
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setIsLoading(true)
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<LoginFormData>({
+    resolver: zodResolver(loginSchema),
+  })
 
-    // TODO: 실제 로그인 API 호출 로직 구현
-    try {
-      // 로그인 처리
-      console.log("Login attempt:", { email, password })
+  const loginMutation = useMutation({
+    mutationFn: (data: LoginFormData) => authApi.login(data),
+    onSuccess: (response) => {
+      if (response.success) {
+        toast.success("로그인 성공!")
+        // 로그인 성공 시 메인 페이지로 이동
+        router.push("/")
+      } else {
+        toast.error(response.error?.message || "로그인에 실패했습니다")
+      }
+    },
+    onError: (error) => {
+      console.error("Login error:", error)
+      toast.error("로그인 중 오류가 발생했습니다")
+    },
+  })
 
-      // 성공 시 리다이렉트
-      // router.push("/dashboard")
-    } catch (error) {
-      console.error("Login failed:", error)
-    } finally {
-      setIsLoading(false)
-    }
+  const onSubmit = (data: LoginFormData) => {
+    loginMutation.mutate(data)
   }
 
   const handleSignup = () => {
@@ -50,7 +63,7 @@ export function LoginForm() {
       <div>
 
 
-        <form onSubmit={handleLogin} className="space-y-5">
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
           {/* 이메일 입력 */}
           <div>
             <label htmlFor="email" className="block text-sm font-medium mb-2">
@@ -59,12 +72,13 @@ export function LoginForm() {
             <input
               id="email"
               type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
+              {...register("email")}
               className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all"
               placeholder="이메일을 입력하세요"
             />
+            {errors.email && (
+              <p className="mt-1 text-sm text-red-600">{errors.email.message}</p>
+            )}
           </div>
 
           {/* 비밀번호 입력 */}
@@ -75,21 +89,22 @@ export function LoginForm() {
             <input
               id="password"
               type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
+              {...register("password")}
               className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all"
               placeholder="비밀번호를 입력하세요"
             />
+            {errors.password && (
+              <p className="mt-1 text-sm text-red-600">{errors.password.message}</p>
+            )}
           </div>
 
           {/* 로그인 버튼 */}
           <button
             type="submit"
-            disabled={isLoading}
+            disabled={loginMutation.isPending}
             className="w-full bg-primary text-white font-semibold py-3 rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed mt-8"
           >
-            {isLoading ? "로그인 중..." : "로그인"}
+            {loginMutation.isPending ? "로그인 중..." : "로그인"}
           </button>
         </form>
 

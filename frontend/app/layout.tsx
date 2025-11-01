@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import localFont from 'next/font/local';
 import "./globals.css";
 import { Toaster } from "@/components/ui/sonner";
+import { QueryProvider } from "@/lib/query-provider";
 
 export const metadata: Metadata = {
   title: "Scan&Sell",
@@ -85,8 +86,10 @@ export default function RootLayout({
           <h1 id="splash-text">Scan&Sell</h1>
         </div>
 
-        {children}
-        <Toaster />
+        <QueryProvider>
+          {children}
+          <Toaster />
+        </QueryProvider>
 
         {/* Splash 화면 제거 스크립트 */}
         <script dangerouslySetInnerHTML={{ __html: `
