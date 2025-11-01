@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Auto-Rotate Demo - 3D Viewer</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 1200px;
+        }
+
+        h1 {
+            color: white;
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 2.5em;
+            text-shadow: 0 2px 10px rgba(0,0,0,0.2);
+        }
+
+        .viewer-wrapper {
+            background: white;
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            aspect-ratio: 16 / 9;
+            position: relative;
+        }
+
+        iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+            display: block;
+        }
+
+        .loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: #667eea;
+            font-size: 1.2em;
+            font-weight: 600;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 15px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .controls {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            margin-top: 30px;
+            flex-wrap: wrap;
+        }
+
+        button {
+            background: white;
+            color: #667eea;
+            border: 2px solid white;
+            padding: 12px 30px;
+            border-radius: 30px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+
+        button:hover {
+            background: #667eea;
+            color: white;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+        }
+
+        button.active {
+            background: #667eea;
+            color: white;
+        }
+
+        .info {
+            background: rgba(255,255,255,0.95);
+            border-radius: 12px;
+            padding: 20px;
+            margin-top: 30px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+
+        .info h2 {
+            color: #667eea;
+            margin-bottom: 10px;
+            font-size: 1.3em;
+        }
+
+        .info p {
+            color: #666;
+            line-height: 1.6;
+        }
+
+        .status {
+            display: inline-block;
+            padding: 6px 15px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 600;
+            margin-top: 10px;
+        }
+
+        .status.loading {
+            background: #ff9800;
+            color: white;
+        }
+
+        .status.ready {
+            background: #4CAF50;
+            color: white;
+        }
+
+        .status.rotating {
+            background: #2196F3;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎨 3D Auto-Rotate Viewer</h1>
+
+        <div class="viewer-wrapper">
+            <div class="loading" id="loadingIndicator">
+                <div class="spinner"></div>
+                Loading 3D Model...
+            </div>
+            <iframe id="viewer"
+                    src="/viewer/?load=http://kaprpc.iptime.org:5051/recon/pub/LC5jVguvOn/cloud.ply"
+                    allow="xr-spatial-tracking">
+            </iframe>
+        </div>
+
+        <div class="controls">
+            <button id="playBtn" onclick="startRotation()" class="active">▶️ Play</button>
+            <button id="pauseBtn" onclick="stopRotation()">⏸️ Pause</button>
+            <button onclick="setSpeed(30)">🐢 Slow (30°/s)</button>
+            <button onclick="setSpeed(60)">🚶 Normal (60°/s)</button>
+            <button onclick="setSpeed(120)">🏃 Fast (120°/s)</button>
+            <button onclick="setSpeed(180)">🚀 Super Fast (180°/s)</button>
+        </div>
+
+        <div class="info">
+            <h2>ℹ️ Information</h2>
+            <p>
+                이 3D 모델은 자동으로 회전합니다.
+                마우스로 드래그하여 원하는 각도로 보거나,
+                아래 버튼으로 회전 속도를 조절할 수 있습니다.
+            </p>
+            <div>
+                Status: <span class="status loading" id="status">Loading...</span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const iframe = document.getElementById('viewer');
+        const loadingIndicator = document.getElementById('loadingIndicator');
+        const statusEl = document.getElementById('status');
+        const playBtn = document.getElementById('playBtn');
+        const pauseBtn = document.getElementById('pauseBtn');
+
+        let viewerReady = false;
+        let isRotating = false;
+        let currentSpeed = 60; // 훨씬 빠르게!
+
+        // Listen for autoRotateReady message from viewer
+        window.addEventListener('message', function(event) {
+            const message = event.data;
+
+            if (message.type === 'autoRotateReady' && message.success) {
+                viewerReady = true;
+                loadingIndicator.style.display = 'none';
+
+                // Auto-start rotation when ready
+                startRotation();
+            }
+        });
+
+        function startRotation() {
+            if (!viewerReady) {
+                alert('뷰어가 아직 준비되지 않았습니다.');
+                return;
+            }
+
+            iframe.contentWindow.postMessage({
+                action: 'startAutoRotate',
+                speed: currentSpeed
+            }, '*');
+
+            isRotating = true;
+            playBtn.classList.add('active');
+            pauseBtn.classList.remove('active');
+
+            statusEl.textContent = `Rotating at ${currentSpeed}°/s`;
+            statusEl.className = 'status rotating';
+
+            console.log(`[Demo] Started rotation at ${currentSpeed}°/s`);
+        }
+
+        function stopRotation() {
+            if (!viewerReady) return;
+
+            iframe.contentWindow.postMessage({
+                action: 'stopAutoRotate'
+            }, '*');
+
+            isRotating = false;
+            playBtn.classList.remove('active');
+            pauseBtn.classList.add('active');
+
+            statusEl.textContent = 'Paused';
+            statusEl.className = 'status ready';
+
+            console.log('[Demo] Stopped rotation');
+        }
+
+        function setSpeed(speed) {
+            currentSpeed = speed;
+
+            if (isRotating) {
+                // Restart with new speed
+                iframe.contentWindow.postMessage({
+                    action: 'setSpeed',
+                    speed: speed
+                }, '*');
+
+                statusEl.textContent = `Rotating at ${speed}°/s`;
+                console.log(`[Demo] Changed speed to ${speed}°/s`);
+            }
+        }
+
+        // Initialize
+        iframe.addEventListener('load', function() {
+            console.log('[Demo] Iframe loaded, waiting for viewer initialization...');
+        });
+    </script>
+</body>
+</html>

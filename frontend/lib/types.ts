@@ -24,52 +24,79 @@ export interface Pagination {
 }
 
 // ============ 상품 타입 ============
+export interface ProductImage {
+    image_id: number;
+    s3_url: string;
+    sort_order: number;
+}
+
 export interface Product {
-    id: number;
-    title: string;
+    product_id: string;  // UUID
+    name: string;
     price: number;
-    thumbnail: string;
-    likes: number;
-    views: number;
-    location: string;
-    createdAt: string;
+    sell_status: 'DRAFT' | 'ACTIVE' | 'DELETED' | 'SOLD';
+    ply_url?: string;
+    view_cnt: number;
+    likes_cnt: number;
+    created_at: string;
+    updated_at?: string;
+    seller?: {
+        member_id: number;
+        nickname: string;
+        img?: string;
+    };
+    images?: ProductImage[];
 }
 
 export interface ProductDetail extends Product {
     description: string;
-    images: string[];
-    seller: User;
-    updatedAt: string;
+    job_count: number;
+    fault_description?: {
+        markdown?: string;
+        status: 'QUEUED' | 'RUNNING' | 'DONE' | 'FAILED';
+        error_msg?: string;
+        completed_at?: string;
+    };
+    job_3dgs?: {
+        status: 'QUEUED' | 'RUNNING' | 'DONE' | 'FAILED';
+        log?: string;
+        error_msg?: string;
+        completed_at?: string;
+    };
 }
 
 export interface ProductListResponse {
     products: Product[];
-    pagination: Pagination;
+    pagination: {
+        total: number;
+        page: number;
+        limit: number;
+        total_pages: number;
+    };
 }
 
 export interface CreateProductRequest {
-    title: string;
+    name: string;
     price: number;
-    description: string;
-    location: string;
-    images: string[];
+    description?: string;
+    images: File[];  // 15-25장의 이미지 파일
 }
 
 export interface UpdateProductRequest {
-    title: string;
-    price: number;
-    description: string;
-    location: string;
-    images: string[];
+    name?: string;
+    price?: number;
+    description?: string;
+    sell_status?: 'DRAFT' | 'ACTIVE' | 'DELETED' | 'SOLD';
 }
 
 // ============ 사용자 타입 ============
 export interface User {
-    id: number;
-    name: string;
-    email?: string;
-    location: string;
-    profileImage: string;
+    member_id: number;
+    email: string;
+    nickname: string;
+    img?: string;
+    created_at: string;
+    updated_at?: string;
 }
 
 // ============ 인증 타입 ============
@@ -86,25 +113,15 @@ export interface RegisterRequest {
 }
 
 export interface AuthResponse {
-    accessToken: string;
-    refreshToken: string;
+    message: string;
     user: User;
-}
-
-export interface RefreshTokenRequest {
-    refreshToken: string;
-}
-
-export interface RefreshTokenResponse {
-    accessToken: string;
-    refreshToken: string;
 }
 
 // ============ 좋아요 타입 ============
 export interface LikeResponse {
-    productId: number;
-    likes: number;
-    isLiked: boolean;
+    product_id: string;
+    likes_cnt: number;
+    is_liked: boolean;
 }
 
 // ============ 이미지 업로드 타입 ============
@@ -117,41 +134,54 @@ export interface ImageUploadResponse {
 
 // ============ 채팅 타입 ============
 export interface ChatRoom {
-    roomId: string;
-    product: {
-        id: number;
-        title: string;
-        thumbnail: string;
-        price: number;
-    };
-    otherUser: User;
-    lastMessage?: ChatMessage;
-    unreadCount: number;
-}
-
-export interface ChatMessage {
-    id: string;
-    senderId: number;
-    content: string;
-    createdAt: string;
-    isRead: boolean;
+    room_id: number;
+    product_id: string;
+    buyer_id: number;
+    seller_id: number;
+    created_at: string;
+    updated_at: string;
+    product_name: string;
+    product_price: number;
+    product_thumbnail?: string;
+    other_user_name: string;
+    other_user_img?: string;
+    other_user_id: number;
+    user_type: 'buyer' | 'seller';
+    last_message?: string;
+    last_message_time?: string;
+    unread_count: number;
 }
 
 export interface ChatRoomDetail {
-    roomId: string;
-    productId: number;
-    seller: User;
-    buyer: User;
-    createdAt: string;
+    room_id: number;
+    product_id: string;
+    buyer_id: number;
+    seller_id: number;
+    created_at: string;
+    updated_at: string;
+    product_name: string;
+    product_price: number;
+    product_thumbnail?: string;
+    other_user_name: string;
+    other_user_img?: string;
+    other_user_id: number;
+    buyer_nickname: string;
+    seller_nickname: string;
 }
 
-export interface ChatMessagesResponse {
-    messages: ChatMessage[];
-    pagination: Pagination;
+export interface ChatMessage {
+    msg_id: number;
+    room_id: number;
+    sender_id: number;
+    content: string;
+    created_at: string;
+    is_read: boolean;
+    sender_nickname?: string;
+    sender_img?: string;
 }
 
 export interface CreateChatRoomRequest {
-    productId: number;
+    productId: string;
 }
 
 export interface SendMessageRequest {
