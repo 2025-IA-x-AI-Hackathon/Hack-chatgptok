@@ -73,7 +73,7 @@ app.use('/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpecs));
 app.use('/api/v1', routes);
 
 // HTTP 서버 시작 (Socket.IO 포함)
-const PORT = process.env.PORT || 4000;
+const PORT = process.env.PORT || 8000;
 httpServer.listen(PORT, () => {
     console.log(`🚀 Server is running on port ${PORT}`);
     console.log(`🔌 WebSocket server is ready`);

@@ -1,60 +1,94 @@
 import UserModel from '../models/userModel.js';
 
 const UserController = {
-    // 회원가입
-    async signup(req, res) {
+    // 내 정보 조회
+    async getMe(req, res) {
+        console.log('[User] 내 정보 조회 요청 - 내 ID:', req.user?.userId);
         try {
-            // TODO: 구현 필요
-            res.status(501).json({ error: 'Not implemented yet' });
-        } catch (error) {
-            res.status(500).json({ error: error.message });
-        }
-    },
-
-    // 로그인
-    async login(req, res) {
-        try {
-            // TODO: JWT 기반 인증 구현 필요
-            res.status(501).json({ error: 'Not implemented yet' });
-        } catch (error) {
-            res.status(500).json({ error: error.message });
-        }
-    },
-
-    // 로그아웃
-    async logout(req, res) {
-        try {
-            // TODO: 구현 필요
-            res.status(501).json({ error: 'Not implemented yet' });
-        } catch (error) {
-            res.status(500).json({ error: error.message });
-        }
-    },
-
-    // 프로필 조회
-    async getProfile(req, res) {
-        try {
-            // JWT 미들웨어에서 설정한 req.user.userId 사용
             const userId = req.user.userId;
 
             const user = await UserModel.findById(userId);
-
             if (!user) {
-                return res.status(404).json({ error: '사용자를 찾을 수 없습니다.' });
+                console.log('[User] 내 정보 조회 실패 - 내 정보 없음, userId:', userId);
+                return res.status(404).json({
+                    success: false,
+                    message: '내 정보를 찾을 수 없습니다.',
+                });
             }
 
+            // 비밀번호 제외하고 응답
+            const userResponse = {
+                member_id: user.member_id,
+                email: user.email,
+                nickname: user.nickname,
+                img: user.img,
+                created_at: user.created_at,
+            };
+
+            console.log('[User] 내 정보 조회 성공 - 내 ID:', userId);
             res.status(200).json({
-                user: {
-                    member_id: user.member_id,
-                    email: user.email,
-                    nickname: user.nickname,
-                    img: user.img,
-                    created_at: user.created_at,
-                    updated_at: user.updated_at
+                success: true,
+                data: {
+                    user: userResponse,
+                },
+            });
+        } catch (error) {
+            console.error('[User] 내 정보 조회 에러:', error);
+            res.status(500).json({
+                success: false,
+                message: '내 정보 조회 중 오류가 발생했습니다.',
+            });
+        }
+    },
+
+    // 사용자 프로필 조회 (다른 사용자 프로필 조회 가능)
+    async getProfile(req, res) {
+        console.log('[User] 사용자 프로필 조회 요청 - 대상 사용자 ID:', req.params.userId);
+        try {
+            // URL 파라미터에서 userId 가져오기
+            const targetUserId = req.params.userId;
+
+            if (!targetUserId) {
+                console.log('[User] 사용자 프로필 조회 실패 - userId 파라미터 누락');
+                return res.status(400).json({
+                    success: false,
+                    message: '사용자 ID가 필요합니다.'
+                });
+            }
+
+            const user = await UserModel.findById(targetUserId);
+
+            if (!user) {
+                console.log('[User] 사용자 프로필 조회 실패 - 사용자 없음, userId:', targetUserId);
+                return res.status(404).json({
+                    success: false,
+                    message: '사용자를 찾을 수 없습니다.'
+                });
+            }
+
+            // 비밀번호 제외하고 응답
+            const userResponse = {
+                member_id: user.member_id,
+                email: user.email,
+                nickname: user.nickname,
+                img: user.img,
+                created_at: user.created_at,
+                updated_at: user.updated_at
+            };
+
+            console.log('[User] 사용자 프로필 조회 성공 - 사용자 ID:', targetUserId);
+            res.status(200).json({
+                success: true,
+                data: {
+                    user: userResponse
                 }
             });
         } catch (error) {
-            res.status(500).json({ error: error.message });
+            console.error('[User] 사용자 프로필 조회 에러:', error);
+            res.status(500).json({
+                success: false,
+                message: '사용자 프로필 조회 중 오류가 발생했습니다.'
+            });
         }
     },
 
@@ -71,31 +105,49 @@ const UserController = {
             if (img !== undefined) updates.img = img;
 
             if (Object.keys(updates).length === 0) {
-                return res.status(400).json({ error: '업데이트할 정보가 없습니다.' });
+                console.error('[User] 프로필 수정 실패 - 업데이트할 정보가 없음, userId:', userId);
+                return res.status(400).json({
+                    success: false,
+                    message: '업데이트할 정보가 없습니다.'
+                });
             }
 
             const success = await UserModel.updateUser(userId, updates);
 
             if (!success) {
-                return res.status(400).json({ error: '프로필 업데이트에 실패했습니다.' });
+                console.error('[User] 프로필 수정 실패 - 사용자 없음 또는 변경사항 없음, userId:', userId);
+                return res.status(400).json({
+                    success: false,
+                    message: '프로필 업데이트에 실패했습니다.'
+                });
             }
 
             // 업데이트된 사용자 정보 조회
             const updatedUser = await UserModel.findById(userId);
 
+
+            const userResponse = {  
+                member_id: updatedUser.member_id,
+                email: updatedUser.email,
+                nickname: updatedUser.nickname,
+                img: updatedUser.img,
+                created_at: updatedUser.created_at,
+                updated_at: updatedUser.updated_at
+            };
+            
             res.status(200).json({
+                success: true,
                 message: '프로필이 성공적으로 업데이트되었습니다.',
-                user: {
-                    member_id: updatedUser.member_id,
-                    email: updatedUser.email,
-                    nickname: updatedUser.nickname,
-                    img: updatedUser.img,
-                    created_at: updatedUser.created_at,
-                    updated_at: updatedUser.updated_at
+                data: {
+                    user: userResponse
                 }
             });
         } catch (error) {
-            res.status(500).json({ error: error.message });
+            console.error('[User] 프로필 수정 에러:', error);
+            res.status(500).json({
+                success: false,
+                message: '프로필 수정 중 오류가 발생했습니다.',
+            });
         }
     },
 };

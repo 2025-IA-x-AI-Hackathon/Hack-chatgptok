@@ -224,46 +224,6 @@ const authController = {
         }
     },
 
-    // 내 정보 조회
-    async getMe(req, res) {
-        console.log('[Auth] 내 정보 조회 요청 - 사용자 ID:', req.user?.userId);
-        try {
-            const userId = req.user.userId;
-
-            const user = await UserModel.findById(userId);
-            if (!user) {
-                console.log('[Auth] 내 정보 조회 실패 - 사용자 없음, userId:', userId);
-                return res.status(404).json({
-                    success: false,
-                    message: '사용자를 찾을 수 없습니다.',
-                });
-            }
-
-            // 비밀번호 제외하고 응답
-            const userResponse = {
-                member_id: user.member_id,
-                email: user.email,
-                nickname: user.nickname,
-                img: user.img,
-                created_at: user.created_at,
-            };
-
-            console.log('[Auth] 내 정보 조회 성공 - 사용자 ID:', userId);
-            res.status(200).json({
-                success: true,
-                data: {
-                    user: userResponse,
-                },
-            });
-        } catch (error) {
-            console.error('[Auth] 사용자 정보 조회 에러:', error);
-            res.status(500).json({
-                success: false,
-                message: '사용자 정보 조회 중 오류가 발생했습니다.',
-            });
-        }
-    },
-
     // 로그아웃 (클라이언트에서 토큰 삭제로 처리)
     async logout(req, res) {
         console.log('[Auth] 로그아웃 요청');
