@@ -11,7 +11,7 @@ const ProductModel = {
                 p.*,
                 m.nickname as seller_nickname,
                 m.img as seller_img,
-                (SELECT s3_url FROM product_image WHERE product_id = p.product_id ORDER BY sort_order LIMIT 1) as thumbnail
+                (SELECT s3_key FROM product_image WHERE product_id = p.product_id ORDER BY sort_order LIMIT 1) as thumbnail
             FROM product p
             JOIN member m ON p.member_id = m.member_id
             WHERE p.sell_status = ?
@@ -132,7 +132,7 @@ const ProductModel = {
         ]);
 
         const query = `
-            INSERT INTO product_image (product_id, s3_url, sort_order, created_at)
+            INSERT INTO product_image (product_id, s3_key, sort_order, created_at)
             VALUES ?
         `;
 
@@ -207,7 +207,7 @@ const ProductModel = {
         let query = `
             SELECT
                 p.*,
-                (SELECT s3_url FROM product_image WHERE product_id = p.product_id ORDER BY sort_order LIMIT 1) as thumbnail
+                (SELECT s3_key FROM product_image WHERE product_id = p.product_id ORDER BY sort_order LIMIT 1) as thumbnail
             FROM product p
             WHERE p.member_id = ?
         `;

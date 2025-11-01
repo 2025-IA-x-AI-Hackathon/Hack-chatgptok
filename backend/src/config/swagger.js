@@ -78,10 +78,10 @@ const options = {
                             format: 'uuid',
                             description: '상품 ID (UUID)',
                         },
-                        s3_url: {
+                        s3_key: {
                             type: 'string',
-                            description: 'S3 이미지 URL',
-                            example: 'https://bucket.s3.amazonaws.com/products/image.jpg',
+                            description: 'S3 이미지 KEY',
+                            example: 'products/image.jpg',
                         },
                         sort_order: {
                             type: 'integer',
