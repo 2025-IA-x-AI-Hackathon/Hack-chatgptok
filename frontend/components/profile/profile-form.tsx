@@ -4,7 +4,8 @@ import { useState, useRef } from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { Camera, User, Lock, Upload, Mail, Calendar, Info } from "lucide-react"
+import { useRouter } from "next/navigation"
+import { Camera, User, Lock, Upload, Mail, Calendar, Info, LogOut } from "lucide-react"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -12,7 +13,7 @@ import { Input } from "@/components/ui/input"
 import { Field, FieldLabel } from "@/components/ui/field"
 import { Separator } from "@/components/ui/separator"
 import { toast } from "sonner"
-import { userApi, uploadApi } from "@/lib/api"
+import { userApi, uploadApi, authApi } from "@/lib/api"
 import {
   updateProfileSchema,
   updatePasswordSchema,
@@ -25,6 +26,7 @@ export function ProfileForm() {
   const [uploadProgress, setUploadProgress] = useState(0)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const queryClient = useQueryClient()
+  const router = useRouter()
 
   // 프로필 조회 Query
   const { data: user, isLoading: isLoadingProfile } = useQuery({
@@ -127,6 +129,23 @@ export function ProfileForm() {
     },
   })
 
+  // 로그아웃 Mutation
+  const logoutMutation = useMutation({
+    mutationFn: () => authApi.logout(),
+    onSuccess: (response) => {
+      if (response.success) {
+        toast.success("로그아웃되었습니다")
+        router.push("/login")
+      } else {
+        toast.error(response.error?.message || "로그아웃에 실패했습니다")
+      }
+    },
+    onError: (error) => {
+      console.error("Logout error:", error)
+      toast.error("로그아웃 중 오류가 발생했습니다")
+    },
+  })
+
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
@@ -164,6 +183,10 @@ export function ProfileForm() {
 
   const onPasswordSubmit = (data: UpdatePasswordFormData) => {
     updatePasswordMutation.mutate(data)
+  }
+
+  const handleLogout = () => {
+    logoutMutation.mutate()
   }
 
   const currentProfileImage = imagePreview || user?.img || "/placeholder-avatar.jpg"
@@ -396,6 +419,26 @@ export function ProfileForm() {
               {updatePasswordMutation.isPending ? "변경 중..." : "비밀번호 변경"}
             </Button>
           </form>
+        </CardContent>
+      </Card>
+
+      {/* 로그아웃 섹션 */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <LogOut className="size-5" />
+            로그아웃
+          </CardTitle>
+          <CardDescription>계정에서 로그아웃합니다</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Button
+            variant="destructive"
+            onClick={handleLogout}
+            disabled={logoutMutation.isPending}
+          >
+            {logoutMutation.isPending ? "로그아웃 중..." : "로그아웃"}
+          </Button>
         </CardContent>
       </Card>
     </div>
