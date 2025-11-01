@@ -1,4 +1,5 @@
 import UserModel from '../models/userModel.js';
+import { getPresignedUrl } from '../config/s3.js';
 
 const UserController = {
     // 내 정보 조회
@@ -17,20 +18,41 @@ const UserController = {
             const user = await UserModel.findById(memberId);
 
             if (!user) {
+                console.log('[User] 내 정보 조회 실패 - 사용자 없음, memberId:', memberId);
                 return res.status(404).json({
                     success: false,
-                    message: '사용자를 찾을 수 없습니다.'
+                    message: '사용자를 찾을 수 없습니다.',
                 });
             }
 
-            // 비밀번호 제외
-            delete user.password;
-
-            res.json({
-                success: true,
-                data: {
-                    user
+            // img를 presigned URL로 변환
+            let imgUrl = null;
+            if (user.img) {
+                try {
+                    imgUrl = await getPresignedUrl(user.img);
+                } catch (error) {
+                    console.error('[User] Presigned URL 생성 실패 - s3_key:', user.img, error);
+                    imgUrl = null;
                 }
+            }
+
+            // 비밀번호 제외하고 응답
+            const userResponse = {
+                member_id: user.member_id,
+                email: user.email,
+                nickname: user.nickname,
+                img_url: imgUrl,
+                created_at: user.created_at,
+                updated_at: user.updated_at,
+            };
+
+            console.log('[User] 내 정보 조회 성공 - memberId:', memberId);
+            res.status(200).json({
+                success: true,
+                message: '내 정보 조회에 성공했습니다.',
+                data: {
+                    user: userResponse,
+                },
             });
         } catch (error) {
             console.error('[User] 내 정보 조회 에러:', error);
@@ -140,12 +162,23 @@ const UserController = {
                 });
             }
 
+            // img를 presigned URL로 변환
+            let imgUrl = null;
+            if (user.img) {
+                try {
+                    imgUrl = await getPresignedUrl(user.img);
+                } catch (error) {
+                    console.error('[User] Presigned URL 생성 실패 - s3_key:', user.img, error);
+                    imgUrl = null;
+                }
+            }
+
             // 비밀번호 제외하고 응답
             const userResponse = {
                 member_id: user.member_id,
                 email: user.email,
                 nickname: user.nickname,
-                img: user.img,
+                img_url: imgUrl,
                 created_at: user.created_at,
                 updated_at: user.updated_at
             };
@@ -176,10 +209,11 @@ const UserController = {
             const updates = {};
             if (nickname !== undefined) updates.nickname = nickname;
             if (password !== undefined) updates.password = password;
+            // img는 S3 key로 저장 (클라이언트에서 업로드 후 받은 key 값을 전달)
             if (img !== undefined) updates.img = img;
 
             if (Object.keys(updates).length === 0) {
-                console.error('[User] 프로필 수정 실패 - 업데이트할 정보가 없음, userId:', userId);
+                console.error('[User] 프로필 수정 실패 - 업데이트할 정보가 없음, memberId:', memberId);
                 return res.status(400).json({
                     success: false,
                     message: '업데이트할 정보가 없습니다.'
@@ -189,7 +223,7 @@ const UserController = {
             const success = await UserModel.updateUser(memberId, updates);
 
             if (!success) {
-                console.error('[User] 프로필 수정 실패 - 사용자 없음 또는 변경사항 없음, userId:', userId);
+                console.error('[User] 프로필 수정 실패 - 사용자 없음 또는 변경사항 없음, memberId:', memberId);
                 return res.status(400).json({
                     success: false,
                     message: '프로필 업데이트에 실패했습니다.'
@@ -199,16 +233,26 @@ const UserController = {
             // 업데이트된 사용자 정보 조회
             const updatedUser = await UserModel.findById(memberId);
 
+            // img를 presigned URL로 변환
+            let imgUrl = null;
+            if (updatedUser.img) {
+                try {
+                    imgUrl = await getPresignedUrl(updatedUser.img);
+                } catch (error) {
+                    console.error('[User] Presigned URL 생성 실패 - s3_key:', updatedUser.img, error);
+                    imgUrl = null;
+                }
+            }
 
-            const userResponse = {  
+            const userResponse = {
                 member_id: updatedUser.member_id,
                 email: updatedUser.email,
                 nickname: updatedUser.nickname,
-                img: updatedUser.img,
+                img_url: imgUrl,
                 created_at: updatedUser.created_at,
                 updated_at: updatedUser.updated_at
             };
-            
+
             res.status(200).json({
                 success: true,
                 message: '프로필이 성공적으로 업데이트되었습니다.',

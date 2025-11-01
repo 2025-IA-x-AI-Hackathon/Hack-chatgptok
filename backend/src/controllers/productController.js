@@ -1,7 +1,6 @@
 import ProductModel from '../models/productModel.js';
 import JobModel from '../models/jobModel.js';
 import { pool } from '../middleware/dbConnection.js';
-import { uploadProductImages } from '../middleware/uploadMiddleware.js';
 import { getPresignedUrl } from '../config/s3.js';
 
 const ProductController = {
@@ -31,7 +30,7 @@ const ProductController = {
             }
 
             // 이미지 URL 확인
-            if (!imageUrls || !Array.isArray(imageUrls) || imageUrls.length === 0) {
+            if (!images || !Array.isArray(images) || images.length === 0) {
                 console.log('[Product] 상품 등록 실패 - 이미지 URL 누락');
                 return res.status(400).json({
                     success: false,
@@ -55,35 +54,42 @@ const ProductController = {
             await ProductModel.addProductImagesWithConnection(connection, productId, images);
 
             // 3. AI 상품 설명 자동 생성 큐 등록
-            // await JobModel.createDescriptionJobWithConnection(connection, productId);
+            await JobModel.createDescriptionJobWithConnection(connection, productId, name, images);
 
             // 4. 3DGS 작업 큐 등록
-            // await JobModel.create3DGSJobWithConnection(connection, productId);
-
-            // 5. 외부 API 호출 (트랜잭션 내부)
-            // 외부 API 호출 실패시 전체 트랜잭션 롤백
-            // await JobModel.notifyWorker('description', productId);
-            // await JobModel.notifyWorker('3dgs', productId);
+            await JobModel.create3DGSJobWithConnection(connection, productId, images);
 
             // 트랜잭션 커밋 (모든 작업 완료)
             await connection.commit();
             console.log('[Product] 상품 등록 성공 - productId:', productId);
 
-            res.status(201).json({
-                success: true,
-                message: '상품이 등록되었습니다.',
-                data: {
-                    productId,
-                    images,
-                },
-            });
+            // 응답이 아직 전송되지 않았을 때만 응답 전송
+            if (!res.headersSent) {
+                res.status(201).json({
+                    success: true,
+                    message: '상품이 등록되었습니다.',
+                    data: {
+                        productId,
+                        images,
+                    },
+                });
+            }
         } catch (error) {
-            await connection.rollback();
-            console.error('[Product] 상품 등록 에러 (롤백):', error);
-            res.status(500).json({
-                success: false,
-                message: '상품 등록 처리 중 오류가 발생했습니다.',
-            });
+            // 트랜잭션이 시작되었으면 롤백
+            try {
+                await connection.rollback();
+            } catch (rollbackError) {
+                console.error('[Product] 롤백 에러:', rollbackError);
+            }
+            console.error('[Product] 상품 등록 에러:', error);
+
+            // 응답이 아직 전송되지 않았을 때만 응답 전송
+            if (!res.headersSent) {
+                res.status(500).json({
+                    success: false,
+                    message: '상품 등록 처리 중 오류가 발생했습니다.',
+                });
+            }
         } finally {
             connection.release();
         }

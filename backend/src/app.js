@@ -15,6 +15,7 @@ import {
 import dbConnectionMiddleware from './middleware/dbConnection.js';
 import sessionConfig from './config/session.js';
 import { setupChatSocket } from './socket/chatSocket.js';
+import { setupNotificationSocket } from './socket/notificationSocket.js';
 import swaggerSpecs from './config/swagger.js';
 
 const app = express();
@@ -29,8 +30,12 @@ const io = new Server(httpServer, {
     }
 });
 
-// Socket.IO 채팅 설정
+// Socket.IO 채팅 및 알림 설정
 setupChatSocket(io);
+setupNotificationSocket(io);
+
+// Socket.IO 인스턴스를 전역에서 사용할 수 있도록 export
+export { io };
 
 app.use(
     cors({

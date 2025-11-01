@@ -16,12 +16,6 @@ const UploadController = {
     // Pre-signed URL 생성 (단일 파일)
     async getPresignedUrl(req, res) {
         try {
-            const memberId = req.user?.memberId;
-            if (!memberId) {
-                console.log('[Upload] 인증되지 않은 사용자');
-                return res.status(401).json({ error: 'Unauthorized' });
-            }
-
             const { filename, contentType } = req.query;
 
             if (!filename || !contentType) {
@@ -93,15 +87,6 @@ const UploadController = {
     // Pre-signed URL 일괄 생성 (여러 파일)
     async getMultiplePresignedUrls(req, res) {
         try {
-            const memberId = req.user?.memberId;
-            if (!memberId) {
-                console.log('[Upload] 인증되지 않은 사용자');
-                return res.status(401).json({
-                    success: false,
-                    message: '인증되지 않은 사용자',
-                });
-            }
-
             const { files } = req.body; // [{ filename, contentType }]
 
             if (!files || !Array.isArray(files) || files.length === 0) {
@@ -165,7 +150,6 @@ const UploadController = {
                         Bucket: process.env.AWS_BUCKET_NAME,
                         Key: key,
                         ContentType: contentType,
-                        ACL: 'public-read',
                     });
 
                     const uploadUrl = await getSignedUrl(

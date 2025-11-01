@@ -47,11 +47,11 @@ const options = {
                             description: '닉네임',
                             example: '홍길동',
                         },
-                        img: {
+                        img_url: {
                             type: 'string',
                             nullable: true,
-                            description: '프로필 이미지 URL',
-                            example: 'https://example.com/profile.jpg',
+                            description: '프로필 이미지 Presigned URL (1시간 유효)',
+                            example: 'https://bucket.s3.region.amazonaws.com/profiles/image.jpg?X-Amz-...',
                         },
                         created_at: {
                             type: 'string',
@@ -82,6 +82,12 @@ const options = {
                             type: 'string',
                             description: 'S3 이미지 KEY',
                             example: 'products/image.jpg',
+                        },
+                        url: {
+                            type: 'string',
+                            nullable: true,
+                            description: '이미지 Presigned URL (1시간 유효)',
+                            example: 'https://bucket.s3.region.amazonaws.com/products/image.jpg?X-Amz-...',
                         },
                         sort_order: {
                             type: 'integer',
@@ -172,10 +178,10 @@ const options = {
                             type: 'string',
                             description: '판매자 이메일',
                         },
-                        seller_img: {
+                        seller_img_url: {
                             type: 'string',
                             nullable: true,
-                            description: '판매자 프로필 이미지',
+                            description: '판매자 프로필 이미지 Presigned URL (1시간 유효)',
                         },
                         seller_created_at: {
                             type: 'string',
@@ -237,15 +243,16 @@ const options = {
                             type: 'string',
                             description: '판매자 닉네임',
                         },
-                        seller_img: {
+                        seller_img_url: {
                             type: 'string',
                             nullable: true,
-                            description: '판매자 프로필 이미지',
+                            description: '판매자 프로필 이미지 Presigned URL (1시간 유효)',
                         },
                         thumbnail: {
                             type: 'string',
                             nullable: true,
-                            description: '썸네일 이미지 URL',
+                            description: '썸네일 이미지 S3 Key',
+                            example: 'products/1234567890-abc.jpg',
                         },
                     },
                 },
