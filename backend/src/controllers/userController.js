@@ -6,32 +6,53 @@ const UserController = {
     async getMe(req, res) {
         console.log('[User] 내 정보 조회 요청 - 내 ID:', req.user?.memberId);
         try {
-            const memberId = req.user.memberId;
-
+            const memberId = req.user?.memberId;
             if (!memberId) {
+                console.log('[User] 내 정보 조회 실패 - 인증되지 않은 사용자');
                 return res.status(401).json({
                     success: false,
-                    message: '인증이 필요합니다.'
+                    message: '인증이 필요합니다.',
                 });
             }
 
             const user = await UserModel.findById(memberId);
 
             if (!user) {
+                console.log('[User] 내 정보 조회 실패 - 사용자 없음, memberId:', memberId);
                 return res.status(404).json({
                     success: false,
-                    message: '사용자를 찾을 수 없습니다.'
+                    message: '사용자를 찾을 수 없습니다.',
                 });
             }
 
-            // 비밀번호 제외
-            delete user.password;
-
-            res.json({
-                success: true,
-                data: {
-                    user
+            // img를 presigned URL로 변환
+            let imgUrl = null;
+            if (user.img) {
+                try {
+                    imgUrl = await getPresignedUrl(user.img);
+                } catch (error) {
+                    console.error('[User] Presigned URL 생성 실패 - s3_key:', user.img, error);
+                    imgUrl = null;
                 }
+            }
+
+            // 비밀번호 제외하고 응답
+            const userResponse = {
+                member_id: user.member_id,
+                email: user.email,
+                nickname: user.nickname,
+                img_url: imgUrl,
+                created_at: user.created_at,
+                updated_at: user.updated_at,
+            };
+
+            console.log('[User] 내 정보 조회 성공 - memberId:', memberId);
+            res.status(200).json({
+                success: true,
+                message: '내 정보 조회에 성공했습니다.',
+                data: {
+                    user: userResponse,
+                },
             });
         } catch (error) {
             console.error('[User] 내 정보 조회 에러:', error);
