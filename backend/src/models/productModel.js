@@ -85,7 +85,7 @@ const ProductModel = {
         return product;
     },
 
-    // 상품 생성
+    // 상품 생성 (단순 생성 - 트랜잭션 없음)
     async createProduct({ memberId, name, price, description }) {
         const productId = crypto.randomUUID();
         const now = new Date();
@@ -93,10 +93,26 @@ const ProductModel = {
         const query = `
             INSERT INTO product
             (product_id, member_id, name, price, description, sell_status, job_count, view_cnt, likes_cnt, created_at)
-            VALUES (?, ?, ?, ?, ?, 'DRAFT', 0, 0, 0, ?)
+            VALUES (?, ?, ?, ?, ?, 'PROCESSING', 0, 0, 0, ?)
         `;
 
         await pool.query(query, [productId, memberId, name, price, description, now]);
+
+        return productId;
+    },
+
+    // 상품 생성 (트랜잭션 기반 - connection 전달받음)
+    async createProductWithConnection(connection, { memberId, name, price, description }) {
+        const productId = crypto.randomUUID();
+        const now = new Date();
+
+        const query = `
+            INSERT INTO product
+            (product_id, member_id, name, price, description, sell_status, job_count, view_cnt, likes_cnt, created_at)
+            VALUES (?, ?, ?, ?, ?, 'PROCESSING', 0, 0, 0, ?)
+        `;
+
+        await connection.query(query, [productId, memberId, name, price, description, now]);
 
         return productId;
     },
@@ -121,6 +137,28 @@ const ProductModel = {
         `;
 
         await pool.query(query, [values]);
+    },
+
+    // 상품 이미지 추가 (트랜잭션 기반 - connection 전달받음)
+    async addProductImagesWithConnection(connection, productId, imageUrls) {
+        if (!imageUrls || imageUrls.length === 0) {
+            return;
+        }
+
+        const now = new Date();
+        const values = imageUrls.map((url, index) => [
+            productId,
+            url,
+            index,
+            now,
+        ]);
+
+        const query = `
+            INSERT INTO product_image (product_id, s3_url, sort_order, created_at)
+            VALUES ?
+        `;
+
+        await connection.query(query, [values]);
     },
 
     // 상품 수정
