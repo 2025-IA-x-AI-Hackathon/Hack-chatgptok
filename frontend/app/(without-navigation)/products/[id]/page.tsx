@@ -317,7 +317,6 @@ export default function ProductDetailPage({ params } : {
                 {/* 상품 정보 */}
                 <div className="p-4 border-b">
                     <h1 className="text-xl font-bold mb-2">{product.name}</h1>
-                    <h1 className="text-xl font-bold mb-2">{product.name}</h1>
                     <p className="text-2xl font-bold mb-4">{formatPrice(product.price)}</p>
                     <div className="flex items-center gap-4 text-sm text-muted-foreground">
                         <div className="flex items-center gap-1">
