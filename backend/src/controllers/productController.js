@@ -1,8 +1,11 @@
 import ProductModel from '../models/productModel.js';
+import JobModel from '../models/jobModel.js';
+import { pool } from '../middleware/dbConnection.js';
 
 const ProductController = {
     // 상품 등록
     async createProduct(req, res) {
+        const connection = await pool.getConnection();
         try {
             const memberId = req.user?.memberId;
             if (!memberId) {
@@ -15,29 +18,45 @@ const ProductController = {
                 return res.status(400).json({ error: 'Name and price are required' });
             }
 
-            // 상품 생성
-            const productId = await ProductModel.createProduct({
+            await connection.beginTransaction();
+
+            // 1. 상품 생성
+            const productId = await ProductModel.createProductWithConnection(connection, {
                 memberId,
                 name,
                 price,
                 description,
             });
 
-            // 이미지 추가
+            // 2. 이미지 추가
             if (imageUrls && imageUrls.length > 0) {
-                await ProductModel.addProductImages(productId, imageUrls);
+                await ProductModel.addProductImagesWithConnection(connection, productId, imageUrls);
             }
 
-            // TODO: AI 상품 설명 자동 생성 큐 등록
-            // TODO: 3DGS 작업 큐 등록
+            // 3. AI 상품 설명 자동 생성 큐 등록
+            // await JobModel.createDescriptionJobWithConnection(connection, productId);
+
+            // 4. 3DGS 작업 큐 등록
+            // await JobModel.create3DGSJobWithConnection(connection, productId);
+
+            // 5. 외부 API 호출 (트랜잭션 내부)
+            // 외부 API 호출 실패시 전체 트랜잭션 롤백
+            // await JobModel.notifyWorker('description', productId);
+            // await JobModel.notifyWorker('3dgs', productId);
+
+            // 트랜잭션 커밋 (모든 작업 완료)
+            await connection.commit();
 
             res.status(201).json({
                 message: 'Product created successfully',
                 productId,
             });
         } catch (error) {
+            await connection.rollback();
             console.error('Create product error:', error);
             res.status(500).json({ error: error.message });
+        } finally {
+            connection.release();
         }
     },
 
@@ -239,6 +258,41 @@ const ProductController = {
             res.status(200).json({ message: 'Product unliked successfully' });
         } catch (error) {
             console.error('Unlike product error:', error);
+            res.status(500).json({ error: error.message });
+        }
+    },
+
+    // AI 상품 설명 생성 (워크플로우 2단계: 썸네일로 AI 설명 생성)
+    async generateDescription(req, res) {
+        try {
+            const { thumbnailUrl } = req.body;
+
+            if (!thumbnailUrl) {
+                return res.status(400).json({ error: 'Thumbnail URL is required' });
+            }
+
+            // TODO: 실제 AI API 호출 로직 구현
+            // 예: OpenAI Vision API, Claude Vision API 등
+            // const aiDescription = await callAIService(thumbnailUrl);
+
+            // 임시 응답 (실제로는 AI 서비스 응답을 반환)
+            const mockDescription = `이 상품은 고품질의 제품입니다.
+상세한 설명이 필요합니다.
+
+## 주요 특징
+- 특징 1
+- 특징 2
+- 특징 3
+
+## 상태
+양호한 상태입니다.`;
+
+            res.status(200).json({
+                description: mockDescription,
+                message: 'AI description generated successfully',
+            });
+        } catch (error) {
+            console.error('Generate description error:', error);
             res.status(500).json({ error: error.message });
         }
     },
