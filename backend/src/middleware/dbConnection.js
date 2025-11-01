@@ -12,6 +12,7 @@ const pool = mysql.createPool({
     database: process.env.DB_NAME,
     port: process.env.DB_PORT,
     connectionLimit: 10,
+    timezone: '+09:00', // 한국 시간(KST) 설정
 });
 
 /**
@@ -62,6 +63,9 @@ pool.query = async (query, params) => {
 const dbConnectionMiddleware = async (req, res, next) => {
     try {
         const connection = await pool.getConnection();
+
+        // 한국 시간(KST)으로 타임존 설정
+        await connection.query("SET time_zone = '+09:00'");
 
         const originalQuery = connection.query.bind(connection);
         connection.query = async (...args) => {
