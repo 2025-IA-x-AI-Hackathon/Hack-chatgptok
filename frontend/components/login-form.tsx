@@ -1,69 +1,106 @@
 "use client"
 
-import { LogIn } from "lucide-react"
-import Link from "next/link"
+import Image from "next/image"
+import { useState } from "react"
+import { useRouter } from "next/navigation"
 
-import { cn } from "@/lib/utils"
-import { Button } from "@/components/ui/button"
-import {
-  Field,
-  FieldDescription,
-  FieldGroup,
-  FieldLabel,
-} from "@/components/ui/field"
-import { Input } from "@/components/ui/input"
+export function LoginForm() {
+  const router = useRouter()
+  const [email, setEmail] = useState("")
+  const [password, setPassword] = useState("")
+  const [isLoading, setIsLoading] = useState(false)
 
-export function LoginForm({
-  className,
-  ...props
-}: React.ComponentProps<"div">) {
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setIsLoading(true)
+
+    // TODO: 실제 로그인 API 호출 로직 구현
+    try {
+      // 로그인 처리
+      console.log("Login attempt:", { email, password })
+
+      // 성공 시 리다이렉트
+      // router.push("/dashboard")
+    } catch (error) {
+      console.error("Login failed:", error)
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const handleSignup = () => {
+    router.push("/signup")
+  }
+
   return (
-    <div className={cn("flex flex-col gap-6", className)} {...props}>
-      <div className="bg-card/50 backdrop-blur-xl border border-border/50 rounded-2xl shadow-2xl shadow-primary/10 p-8 animate-scale-in">
-        <form className="space-y-6">
-          <FieldGroup>
-            <div className="flex flex-col items-center gap-3 text-center mb-8">
-              <div className="flex size-16 items-center justify-center rounded-2xl gradient-primary shadow-lg">
-                <LogIn className="size-8 text-white" />
-              </div>
-              <h1 className="text-3xl font-bold gradient-text">로그인</h1>
-              <FieldDescription className="text-base">
-                계정이 없으신가요?{" "}
-                <Link href="/signup" className="text-primary font-semibold hover:underline">
-                  회원가입
-                </Link>
-              </FieldDescription>
-            </div>
-            <Field>
-              <FieldLabel htmlFor="email" className="text-base font-semibold">이메일</FieldLabel>
-              <Input
-                id="email"
-                type="email"
-                placeholder="example@email.com"
-                required
-                className="h-12 text-base rounded-xl border-border/50 focus:border-primary/50 transition-colors"
-              />
-            </Field>
-            <Field>
-              <FieldLabel htmlFor="password" className="text-base font-semibold">비밀번호</FieldLabel>
-              <Input
-                id="password"
-                type="password"
-                placeholder="••••••••"
-                required
-                className="h-12 text-base rounded-xl border-border/50 focus:border-primary/50 transition-colors"
-              />
-            </Field>
-            <Field className="pt-4">
-              <Button
-                type="submit"
-                className="w-full h-12 text-base font-semibold gradient-primary hover:shadow-lg hover:shadow-primary/30 transition-all duration-300"
-              >
-                로그인
-              </Button>
-            </Field>
-          </FieldGroup>
+    <div className="w-full max-w-md mx-auto px-6">
+      {/* 로고 */}
+      <div className="flex justify-center mb-8">
+        <Image
+          src="/logo.png"
+          alt="Logo"
+          width={100}
+          height={100}
+          priority
+          className="w-20 h-20 md:w-24 md:h-24"
+        />
+      </div>
+
+      {/* 로그인 폼 */}
+      <div>
+
+
+        <form onSubmit={handleLogin} className="space-y-5">
+          {/* 이메일 입력 */}
+          <div>
+            <label htmlFor="email" className="block text-sm font-medium mb-2">
+              이메일
+            </label>
+            <input
+              id="email"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all"
+              placeholder="이메일을 입력하세요"
+            />
+          </div>
+
+          {/* 비밀번호 입력 */}
+          <div>
+            <label htmlFor="password" className="block text-sm font-medium mb-2">
+              비밀번호
+            </label>
+            <input
+              id="password"
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all"
+              placeholder="비밀번호를 입력하세요"
+            />
+          </div>
+
+          {/* 로그인 버튼 */}
+          <button
+            type="submit"
+            disabled={isLoading}
+            className="w-full bg-primary text-white font-semibold py-3 rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed mt-8"
+          >
+            {isLoading ? "로그인 중..." : "로그인"}
+          </button>
         </form>
+
+        {/* 회원가입 버튼 */}
+        <button
+          type="button"
+          onClick={handleSignup}
+          className="w-full mt-4 bg-transparent text-primary font-semibold py-3 rounded-lg border-2 border-primary hover:bg-primary/5 transition-colors"
+        >
+          회원가입하기
+        </button>
       </div>
     </div>
   )
