@@ -262,10 +262,10 @@ export default function ProductDetailPage({ params } : {
                     <Carousel setApi={setCarouselApi} className="w-full">
                         <CarouselContent>
                             {product?.images?.map((image, index) => (
-                                <CarouselItem key={index}>
+                                <CarouselItem key={image.image_id}>
                                     <div className="relative aspect-square bg-muted">
                                         <Image
-                                            src={image}
+                                            src={image.url}
                                             alt={`${product.name} - 이미지 ${index + 1}`}
                                             fill
                                             className="object-cover"
@@ -280,7 +280,7 @@ export default function ProductDetailPage({ params } : {
                     </Carousel>
 
                     {/* 이미지 카운터 뱃지 (우측 하단) */}
-                    {product.images.length > 1 && (
+                    {product.images && product.images.length > 1 && (
                         <div className="absolute bottom-4 right-4 bg-black/60 text-white text-sm px-3 py-1.5 rounded-full backdrop-blur-sm">
                             {currentImageIndex + 1} / {product.images.length}
                         </div>
@@ -327,11 +327,9 @@ export default function ProductDetailPage({ params } : {
                         <div className="flex items-center gap-1">
                             <Eye className="w-4 h-4" />
                             <span>{product.view_cnt}</span>
-                            <span>{product.view_cnt}</span>
                         </div>
                         <div className="flex items-center gap-1">
                             <Heart className="w-4 h-4" />
-                            <span>{product.likes_cnt}</span>
                             <span>{product.likes_cnt}</span>
                         </div>
                     </div>

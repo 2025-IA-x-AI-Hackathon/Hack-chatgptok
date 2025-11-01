@@ -73,10 +73,11 @@ export function useProduct(id: string) {
     queryKey: productKeys.detail(id),
     queryFn: async () => {
       const response = await productApi.getProduct(id)
-      if (!response.success) {
+      if (!response.success || !response.data) {
         throw new Error(response.error?.message || "상품을 불러오는데 실패했습니다")
       }
-      return response.data
+      // API 응답 구조: { success, message, data: { product: {...} } }
+      return response.data.product
     },
   })
 }

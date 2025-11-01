@@ -21,6 +21,7 @@ import type {
     Product,
     ProductListResponse,
     ProductDetail,
+    ProductDetailResponse,
     CreateProductRequest,
     UpdateProductRequest,
     LoginRequest,
@@ -204,8 +205,8 @@ export const productApi = {
     /**
      * 상품 상세 조회
      */
-    getProduct: async (id: string): Promise<ApiResponse<ProductDetail>> => {
-        return apiRequest<ProductDetail>(`/products/${id}`, { method: "GET" });
+    getProduct: async (id: string): Promise<ApiResponse<ProductDetailResponse>> => {
+        return apiRequest<ProductDetailResponse>(`/products/${id}`, { method: "GET" });
     },
 
     /**
@@ -499,7 +500,7 @@ export const uploadApi = {
                     };
                 }
 
-                uploadedKeys.push(uploadInfo.fileUrl);
+                uploadedKeys.push(uploadInfo.key);
             }
 
             return {

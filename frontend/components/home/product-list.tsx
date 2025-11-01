@@ -125,13 +125,11 @@ export default function ProductList() {
                                     <div className="flex gap-4 p-4 hover:bg-accent transition-colors">
                                         {/* 상품 썸네일 */}
                                         <div className="relative w-24 h-24 shrink-0 overflow-hidden rounded-lg bg-muted">
-                                            <Image
-                                                src="https://placehold.co/800x800"
-                                                alt={product.name}
-                                                fill
-                                                className="object-cover transition-transform group-hover:scale-105"
-                                                sizes="96px"
-                                                unoptimized
+                                            <iframe
+                                                src="https://kaprpc.iptime.org:5051/v/rotate/00000000-0000-4000-8000-000000000001"
+                                                className="w-full h-full border-0"
+                                                title={product.name}
+                                                sandbox="allow-scripts allow-same-origin"
                                             />
                                         </div>
 
