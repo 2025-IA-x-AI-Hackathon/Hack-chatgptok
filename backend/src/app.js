@@ -1,4 +1,6 @@
 import express from 'express';
+import { createServer } from 'http';
+import { Server } from 'socket.io';
 import cors from 'cors';
 import session from 'express-session';
 import cookieParser from 'cookie-parser';
@@ -11,8 +13,22 @@ import {
 } from './middleware/securityMiddleware.js';
 import dbConnectionMiddleware from './middleware/dbConnection.js';
 import sessionConfig from './config/session.js';
+import { setupChatSocket } from './socket/chatSocket.js';
 
 const app = express();
+const httpServer = createServer(app);
+
+// Socket.IO 서버 생성 및 CORS 설정
+const io = new Server(httpServer, {
+    cors: {
+        origin: 'http://localhost:3000',
+        credentials: true,
+        methods: ['GET', 'POST']
+    }
+});
+
+// Socket.IO 채팅 설정
+setupChatSocket(io);
 
 app.use(
     cors({
@@ -45,7 +61,11 @@ app.use(session(sessionConfig));
 // 라우터 적용
 app.use('/api/v1', routes);
 
-app.set('port', process.env.PORT);
-app.listen(app.get('port'), () => {});
+// HTTP 서버 시작 (Socket.IO 포함)
+const PORT = process.env.PORT || 4000;
+httpServer.listen(PORT, () => {
+    console.log(`🚀 Server is running on port ${PORT}`);
+    console.log(`🔌 WebSocket server is ready`);
+});
 
 export default app;

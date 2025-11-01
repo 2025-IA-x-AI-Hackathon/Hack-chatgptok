@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useRef } from "react"
+import { useState, useRef, useEffect } from "react"
 import { Camera, User, Lock, Upload } from "lucide-react"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
@@ -9,15 +9,42 @@ import { Input } from "@/components/ui/input"
 import { Field, FieldLabel } from "@/components/ui/field"
 import { Separator } from "@/components/ui/separator"
 import { toast } from "sonner"
+import { userApi } from "@/lib/api"
 
 export function ProfileForm() {
   const [profileImage, setProfileImage] = useState<string>("/placeholder-avatar.jpg")
-  const [name, setName] = useState<string>("사용자 이름")
+  const [name, setName] = useState<string>("")
+  const [email, setEmail] = useState<string>("")
   const [currentPassword, setCurrentPassword] = useState<string>("")
   const [newPassword, setNewPassword] = useState<string>("")
   const [confirmPassword, setConfirmPassword] = useState<string>("")
   const [isLoading, setIsLoading] = useState<boolean>(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
+
+  // 로그인된 사용자 정보 가져오기
+  useEffect(() => {
+    const fetchProfile = async () => {
+      try {
+        const response = await userApi.getProfile()
+
+        if (response.success && response.data) {
+          const userData = response.data.user || response.data
+          setName(userData.nickname || "")
+          setEmail(userData.email || "")
+          if (userData.img) {
+            setProfileImage(userData.img)
+          }
+        } else {
+          toast.error("프로필 정보를 불러오는데 실패했습니다.")
+        }
+      } catch (error) {
+        console.error("프로필 조회 실패:", error)
+        toast.error("프로필 정보를 불러오는데 실패했습니다.")
+      }
+    }
+
+    fetchProfile()
+  }, [])
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -39,15 +66,13 @@ export function ProfileForm() {
     setIsLoading(true)
 
     try {
-      // API 호출 예시
-      // await fetch('/api/profile/name', {
-      //   method: 'PUT',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify({ name })
-      // })
+      const response = await userApi.updateProfile({ nickname: name })
 
-      console.log("이름 변경:", name)
-      toast.success("이름이 성공적으로 변경되었습니다!")
+      if (response.success) {
+        toast.success("이름이 성공적으로 변경되었습니다!")
+      } else {
+        toast.error(response.error?.message || "이름 변경에 실패했습니다.")
+      }
     } catch (error) {
       console.error("이름 변경 실패:", error)
       toast.error("이름 변경에 실패했습니다.")
@@ -72,18 +97,16 @@ export function ProfileForm() {
     setIsLoading(true)
 
     try {
-      // API 호출 예시
-      // await fetch('/api/profile/password', {
-      //   method: 'PUT',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify({ currentPassword, newPassword })
-      // })
+      const response = await userApi.updateProfile({ password: newPassword })
 
-      console.log("비밀번호 변경 요청")
-      toast.success("비밀번호가 성공적으로 변경되었습니다!")
-      setCurrentPassword("")
-      setNewPassword("")
-      setConfirmPassword("")
+      if (response.success) {
+        toast.success("비밀번호가 성공적으로 변경되었습니다!")
+        setCurrentPassword("")
+        setNewPassword("")
+        setConfirmPassword("")
+      } else {
+        toast.error(response.error?.message || "비밀번호 변경에 실패했습니다.")
+      }
     } catch (error) {
       console.error("비밀번호 변경 실패:", error)
       toast.error("비밀번호 변경에 실패했습니다.")
@@ -93,19 +116,23 @@ export function ProfileForm() {
   }
 
   const handleImageUpload = async () => {
+    if (!fileInputRef.current?.files?.[0]) {
+      toast.error("업로드할 이미지를 선택해주세요.")
+      return
+    }
+
     setIsLoading(true)
 
     try {
-      // API 호출 예시
-      // const formData = new FormData()
-      // formData.append('image', fileInputRef.current?.files?.[0] as Blob)
-      // await fetch('/api/profile/image', {
-      //   method: 'PUT',
-      //   body: formData
-      // })
+      // 이미지를 base64로 인코딩하거나, 이미지 URL을 직접 사용
+      // 현재는 profileImage state에 이미 base64나 URL이 저장되어 있음
+      const response = await userApi.updateProfile({ img: profileImage })
 
-      console.log("프로필 이미지 업로드")
-      toast.success("프로필 사진이 성공적으로 변경되었습니다!")
+      if (response.success) {
+        toast.success("프로필 사진이 성공적으로 변경되었습니다!")
+      } else {
+        toast.error(response.error?.message || "프로필 사진 변경에 실패했습니다.")
+      }
     } catch (error) {
       console.error("이미지 업로드 실패:", error)
       toast.error("프로필 사진 변경에 실패했습니다.")

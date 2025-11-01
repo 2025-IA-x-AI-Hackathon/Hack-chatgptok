@@ -2,89 +2,77 @@
 
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
+import { chatApi } from "@/lib/api";
+import type { ChatRoom } from "@/lib/types";
 
 type ChatFilter = "전체" | "구매자" | "판매자" | "읽지 않음";
 
-interface ChatItem {
-  id: string;
-  userName: string;
-  userImage: string;
-  productImage: string;
-  lastMessage: string;
-  unreadCount: number;
-  type: "buyer" | "seller";
-  timestamp: string;
-}
-
-// 샘플 데이터
-const chatData: ChatItem[] = [
-  {
-    id: "1",
-    userName: "김민수",
-    userImage: "https://api.dicebear.com/7.x/avataaars/svg?seed=1",
-    productImage: "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=100&h=100&fit=crop",
-    lastMessage: "네, 내일 오후 3시에 만나서 직거래 가능할까요?",
-    unreadCount: 2,
-    type: "buyer",
-    timestamp: "오전 11:23",
-  },
-  {
-    id: "2",
-    userName: "이지은",
-    userImage: "https://api.dicebear.com/7.x/avataaars/svg?seed=2",
-    productImage: "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=100&h=100&fit=crop",
-    lastMessage: "상품 상태가 정말 좋네요! 구매하고 싶습니다.",
-    unreadCount: 0,
-    type: "buyer",
-    timestamp: "어제",
-  },
-  {
-    id: "3",
-    userName: "박준영",
-    userImage: "https://api.dicebear.com/7.x/avataaars/svg?seed=3",
-    productImage: "https://images.unsplash.com/photo-1572635196237-14b3f281503f?w=100&h=100&fit=crop",
-    lastMessage: "택배비는 얼마인가요? 서울 지역인데 내일 받을 수 있을까요?",
-    unreadCount: 5,
-    type: "buyer",
-    timestamp: "오후 2:15",
-  },
-  {
-    id: "4",
-    userName: "최수진",
-    userImage: "https://api.dicebear.com/7.x/avataaars/svg?seed=4",
-    productImage: "https://images.unsplash.com/photo-1560343090-f0409e92791a?w=100&h=100&fit=crop",
-    lastMessage: "감사합니다. 잘 받았어요!",
-    unreadCount: 0,
-    type: "seller",
-    timestamp: "2일 전",
-  },
-  {
-    id: "5",
-    userName: "정우성",
-    userImage: "https://api.dicebear.com/7.x/avataaars/svg?seed=5",
-    productImage: "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=100&h=100&fit=crop",
-    lastMessage: "네고 가능한가요? 연락 주세요~",
-    unreadCount: 1,
-    type: "buyer",
-    timestamp: "오전 9:45",
-  },
-];
-
 export default function ChatPage() {
   const [selectedFilter, setSelectedFilter] = useState<ChatFilter>("전체");
+  const [chatRooms, setChatRooms] = useState<ChatRoom[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const filteredChats = chatData.filter((chat) => {
+  // 채팅방 목록 가져오기
+  useEffect(() => {
+    const fetchChatRooms = async () => {
+      try {
+        setLoading(true);
+        const response = await chatApi.getChatRooms();
+
+        if (response.success && response.data?.data) {
+          setChatRooms(response.data.data);
+        } else {
+          setError(response.error?.message || "채팅방을 불러오는데 실패했습니다.");
+        }
+      } catch (err) {
+        setError("채팅방을 불러오는 중 오류가 발생했습니다.");
+        console.error(err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchChatRooms();
+  }, []);
+
+  const filteredChats = chatRooms.filter((chat) => {
     if (selectedFilter === "전체") return true;
-    if (selectedFilter === "구매자") return chat.type === "buyer";
-    if (selectedFilter === "판매자") return chat.type === "seller";
-    if (selectedFilter === "읽지 않음") return chat.unreadCount > 0;
+    if (selectedFilter === "구매자") return chat.user_type === "buyer";
+    if (selectedFilter === "판매자") return chat.user_type === "seller";
+    if (selectedFilter === "읽지 않음") return chat.unread_count > 0;
     return true;
   });
 
   const filters: ChatFilter[] = ["전체", "구매자", "판매자", "읽지 않음"];
+
+  // 시간 포맷팅
+  const formatTimestamp = (timestamp: string | undefined) => {
+    if (!timestamp) return "";
+
+    const date = new Date(timestamp);
+    const now = new Date();
+    const diffInMs = now.getTime() - date.getTime();
+    const diffInDays = Math.floor(diffInMs / (1000 * 60 * 60 * 24));
+
+    if (diffInDays === 0) {
+      // 오늘 - 시간 표시
+      const hours = date.getHours();
+      const minutes = date.getMinutes();
+      const ampm = hours >= 12 ? "오후" : "오전";
+      const displayHours = hours % 12 || 12;
+      return `${ampm} ${displayHours}:${minutes.toString().padStart(2, "0")}`;
+    } else if (diffInDays === 1) {
+      return "어제";
+    } else if (diffInDays < 7) {
+      return `${diffInDays}일 전`;
+    } else {
+      return `${date.getMonth() + 1}월 ${date.getDate()}일`;
+    }
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -114,7 +102,15 @@ export default function ChatPage() {
 
       {/* Chat List */}
       <div className="max-w-7xl mx-auto px-4">
-        {filteredChats.length === 0 ? (
+        {loading ? (
+          <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
+            <p className="text-lg">채팅 목록을 불러오는 중...</p>
+          </div>
+        ) : error ? (
+          <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
+            <p className="text-lg text-red-500">{error}</p>
+          </div>
+        ) : filteredChats.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
             <p className="text-lg">채팅이 없습니다</p>
           </div>
@@ -122,11 +118,11 @@ export default function ChatPage() {
           <div className="divide-y divide-border">
             {filteredChats.map((chat) => (
               <Link
-                key={chat.id}
-                href={`/chat/${chat.id}`}
+                key={chat.room_id}
+                href={`/chat/${chat.room_id}`}
                 className={cn(
                   "block px-4 py-4 hover:bg-accent/50 cursor-pointer transition-colors",
-                  chat.unreadCount > 0 ? "bg-background" : "bg-muted/30"
+                  chat.unread_count > 0 ? "bg-background" : "bg-muted/30"
                 )}
               >
                 <div className="flex items-center gap-3">
@@ -135,15 +131,18 @@ export default function ChatPage() {
                     {/* User Avatar - Background with white fill */}
                     <div className="w-12 h-12 rounded-full overflow-hidden bg-white border-2 border-background">
                       <Avatar className="w-full h-full">
-                        <AvatarImage src={chat.userImage} alt={chat.userName} />
-                        <AvatarFallback className="bg-white">{chat.userName[0]}</AvatarFallback>
+                        <AvatarImage
+                          src={chat.other_user_img || `https://api.dicebear.com/7.x/avataaars/svg?seed=${chat.other_user_id}`}
+                          alt={chat.other_user_name}
+                        />
+                        <AvatarFallback className="bg-white">{chat.other_user_name[0]}</AvatarFallback>
                       </Avatar>
                     </div>
                     {/* Product Image - Overlapping */}
                     <div className="absolute -right-2 -bottom-2">
                       <div className="w-10 h-10 rounded-lg overflow-hidden border-2 border-background">
                         <img
-                          src={chat.productImage}
+                          src={chat.product_thumbnail || "https://placehold.co/100x100/e2e8f0/64748b?text=Product"}
                           alt="Product"
                           className="w-full h-full object-cover"
                         />
@@ -157,41 +156,41 @@ export default function ChatPage() {
                       <h3
                         className={cn(
                           "font-semibold",
-                          chat.unreadCount > 0
+                          chat.unread_count > 0
                             ? "text-foreground"
                             : "text-foreground/70"
                         )}
                       >
-                        {chat.userName}
+                        {chat.other_user_name}
                       </h3>
                       <span
                         className={cn(
                           "text-xs ml-2",
-                          chat.unreadCount > 0
+                          chat.unread_count > 0
                             ? "text-foreground/60 font-medium"
                             : "text-muted-foreground"
                         )}
                       >
-                        {chat.timestamp}
+                        {formatTimestamp(chat.last_message_time)}
                       </span>
                     </div>
                     <div className="flex items-center justify-between gap-2">
                       <p
                         className={cn(
                           "text-sm truncate flex-1",
-                          chat.unreadCount > 0
+                          chat.unread_count > 0
                             ? "text-foreground/80 font-medium"
                             : "text-muted-foreground"
                         )}
                       >
-                        {chat.lastMessage}
+                        {chat.last_message || "메시지가 없습니다"}
                       </p>
-                      {chat.unreadCount > 0 && (
+                      {chat.unread_count > 0 && (
                         <Badge
                           variant="destructive"
                           className="ml-2 min-w-[20px] h-5 flex items-center justify-center text-xs px-1.5"
                         >
-                          {chat.unreadCount}
+                          {chat.unread_count}
                         </Badge>
                       )}
                     </div>

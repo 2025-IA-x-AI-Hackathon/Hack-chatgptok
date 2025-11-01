@@ -4,7 +4,7 @@ import { Heart, Share2, MoreVertical, MapPin, Eye, Clock, ChevronLeft, Pencil, T
 import Image from "next/image";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
     Carousel,
     CarouselContent,
@@ -12,7 +12,7 @@ import {
     type CarouselApi,
 } from "@/components/ui/carousel";
 import { toast } from "sonner";
-import { productApi, likeApi } from "@/lib/api";
+import { productApi, likeApi, chatApi } from "@/lib/api";
 import type { ProductDetail } from "@/lib/types";
 
 // 가격 포맷 함수
@@ -47,6 +47,10 @@ export default function ProductDetailPage() {
     const [isLiked, setIsLiked] = useState(false);
     const [carouselApi, setCarouselApi] = useState<CarouselApi>();
     const [currentImageIndex, setCurrentImageIndex] = useState(0);
+    const [isChatLoading, setIsChatLoading] = useState(false);
+
+    // 진행 중인 요청을 추적하여 중복 호출 방지
+    const requestRef = useRef<{ productId: string; promise: Promise<any> } | null>(null);
 
     useEffect(() => {
         if (!carouselApi) {
@@ -59,7 +63,60 @@ export default function ProductDetailPage() {
     }, [carouselApi]);
 
     useEffect(() => {
-        loadProduct();
+        // 같은 productId의 요청이 진행 중이면 새로운 API 호출 하지 않음
+        // React Strict Mode 중복 호출 완벽 방지
+        if (requestRef.current?.productId === productId) {
+            // 두 번째 실행: 첫 번째 요청의 결과를 기다림
+            requestRef.current.promise
+                .then(response => {
+                    if (response.success && response.data) {
+                        setProduct(response.data);
+                    }
+                })
+                .finally(() => {
+                    setLoading(false);
+                });
+            return;
+        }
+
+        let isMounted = true;
+
+        const loadProductData = async () => {
+            try {
+                setLoading(true);
+                setError(null);
+
+                // Promise 생성 및 요청 추적
+                const promise = productApi.getProduct(productId);
+                requestRef.current = { productId, promise };
+
+                const response = await promise;
+
+                if (isMounted) {
+                    if (response.success && response.data) {
+                        setProduct(response.data);
+                    } else {
+                        setError(response.error?.message || "상품을 불러올 수 없습니다.");
+                        toast.error(response.error?.message || "상품을 불러올 수 없습니다.");
+                    }
+                }
+            } catch (err) {
+                if (isMounted) {
+                    setError("상품을 불러오는 중 오류가 발생했습니다.");
+                    toast.error("상품을 불러오는 중 오류가 발생했습니다.");
+                }
+            } finally {
+                if (isMounted) {
+                    setLoading(false);
+                }
+            }
+        };
+
+        loadProductData();
+
+        return () => {
+            isMounted = false;
+        };
     }, [productId]);
 
     const loadProduct = async () => {
@@ -130,6 +187,36 @@ export default function ProductDetailPage() {
             }
         } catch (err) {
             toast.error("삭제 중 오류가 발생했습니다.");
+        }
+    };
+
+    const handleStartChat = async () => {
+        try {
+            setIsChatLoading(true);
+
+            // 로그인 확인
+            const token = localStorage.getItem('accessToken');
+            if (!token) {
+                toast.error("로그인이 필요합니다.");
+                router.push("/login");
+                return;
+            }
+
+            // 채팅방 생성 또는 조회
+            const response = await chatApi.createOrGetChatRoom({ productId });
+
+            if (response.success && response.data?.data) {
+                const chatRoom = response.data.data;
+                // 채팅방으로 이동
+                router.push(`/chat/${chatRoom.room_id}`);
+            } else {
+                toast.error(response.error?.message || "채팅방 생성에 실패했습니다.");
+            }
+        } catch (err) {
+            console.error("채팅 시작 오류:", err);
+            toast.error("채팅을 시작할 수 없습니다.");
+        } finally {
+            setIsChatLoading(false);
         }
     };
 
@@ -365,8 +452,12 @@ export default function ProductDetailPage() {
                             className={`w-6 h-6 ${isLiked ? "fill-current" : ""}`}
                         />
                     </button>
-                    <button className="flex-1 bg-primary text-primary-foreground py-3 rounded-lg font-medium hover:bg-primary/90 transition-colors">
-                        채팅하기
+                    <button
+                        onClick={handleStartChat}
+                        disabled={isChatLoading}
+                        className="flex-1 bg-primary text-primary-foreground py-3 rounded-lg font-medium hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                        {isChatLoading ? "채팅방 생성 중..." : "채팅하기"}
                     </button>
                 </div>
             </div>

@@ -3,6 +3,7 @@ import express from 'express';
 import userController from '../controllers/userController.js';
 import productController from '../controllers/productController.js';
 import authController from '../controllers/authController.js';
+import chatController from '../controllers/chatController.js';
 
 // middleware
 import isAuthenticated from '../middleware/auth.js';
@@ -38,11 +39,17 @@ router.get('/my-products', authenticateToken, productController.getMyProducts);
 router.post('/products/:productId/like', authenticateToken, productController.likeProduct);
 router.delete('/products/:productId/like', authenticateToken, productController.unlikeProduct);
 
+// Chat routes
+router.post('/chat/rooms', authenticateToken, chatController.createOrGetChatRoom);
+router.get('/chat/rooms', authenticateToken, chatController.getChatRooms);
+router.get('/chat/rooms/:chatRoomId', authenticateToken, chatController.getChatRoomDetail);
+router.get('/chat/rooms/:chatRoomId/messages', authenticateToken, chatController.getMessages);
+router.post('/chat/rooms/:chatRoomId/messages', authenticateToken, chatController.sendMessage);
+router.post('/chat/rooms/:chatRoomId/read', authenticateToken, chatController.markAsRead);
+
 // TODO: 추가 기능 라우트
 // - AI 상품 설명 자동 생성
 // - 3DGS 작업 관리
-// - 좋아요 기능
-// - 채팅 기능
 // - 알림 기능
 
 export default router;
