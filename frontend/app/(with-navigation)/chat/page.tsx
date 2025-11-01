@@ -87,9 +87,9 @@ export default function ChatPage() {
   const filters: ChatFilter[] = ["전체", "구매자", "판매자", "읽지 않음"];
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="fixed inset-0 flex flex-col bg-background pb-16">
       {/* Header with filter badges */}
-      <div className="sticky top-0 z-10 bg-background border-b">
+      <div className="shrink-0 bg-background border-b">
         <div className="max-w-7xl mx-auto px-4 py-6">
           <h1 className="text-2xl font-bold mb-4">채팅</h1>
           <div className="flex gap-2 overflow-x-auto pb-2">
@@ -113,7 +113,8 @@ export default function ChatPage() {
       </div>
 
       {/* Chat List */}
-      <div className="max-w-7xl mx-auto px-4">
+      <div className="flex-1 overflow-y-auto">
+        <div className="max-w-7xl mx-auto px-4">
         {filteredChats.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
             <p className="text-lg">채팅이 없습니다</p>
@@ -201,6 +202,7 @@ export default function ChatPage() {
             ))}
           </div>
         )}
+        </div>
       </div>
     </div>
   );
