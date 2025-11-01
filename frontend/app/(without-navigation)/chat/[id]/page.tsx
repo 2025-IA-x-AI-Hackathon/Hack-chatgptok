@@ -3,9 +3,9 @@ import { use, useState, useRef, useEffect } from 'react'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { ScrollArea } from '@/components/ui/scroll-area'
 import { Card, CardContent } from '@/components/ui/card'
-import { Send, Image as ImageIcon } from 'lucide-react'
+import { Send, Image as ImageIcon, ChevronLeft } from 'lucide-react'
+import { useRouter } from 'next/navigation'
 import { cn } from '@/lib/utils'
 
 // 메시지 타입 정의
@@ -31,9 +31,10 @@ export default function ChatRoom({
   params: Promise<{ id: string }>
 }) {
   const { id } = use(params)
+  const router = useRouter()
   const scrollRef = useRef<HTMLDivElement>(null)
   const [message, setMessage] = useState('')
-  
+
   // 현재 사용자 ID (실제로는 인증 시스템에서 가져옴)
   const currentUserId = 'user1'
   
@@ -179,12 +180,26 @@ export default function ChatRoom({
 
   return (
     <div className="fixed inset-0 flex flex-col bg-gray-50">
+      {/* 헤더 */}
+      <div className="fixed top-0 left-0 right-0 z-50 bg-background border-b shrink-0">
+        <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
+          <button
+            onClick={() => router.back()}
+            className="p-2 hover:bg-accent rounded-lg transition-colors"
+          >
+            <ChevronLeft className="w-6 h-6" />
+          </button>
+          <h1 className="text-lg font-semibold">{otherUser.name}</h1>
+          <div className="w-10"></div>
+        </div>
+      </div>
+
       {/* 상단 제품 정보 */}
-      <Card className="rounded-none border-x-0 border-t-0 shrink-0">
+      <Card className="rounded-none border-x-0 border-t-0 shrink-0 mt-14">
         <CardContent className="p-4">
           <div className="flex items-center gap-3">
-            <img 
-              src={product.thumbnail} 
+            <img
+              src={product.thumbnail}
               alt={product.name}
               className="w-12 h-12 rounded-md object-cover"
             />
