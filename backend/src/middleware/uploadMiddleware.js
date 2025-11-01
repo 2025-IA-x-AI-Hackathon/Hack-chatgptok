@@ -12,27 +12,15 @@ const s3 = new S3Client({
     },
 });
 
-// 프로필 이미지용 S3 저장소 설정
-const profileStorage = multerS3({
-    s3,
-    bucket: process.env.AWS_BUCKET_NAME,
-    key(req, file, cb) {
-        cb(
-            null,
-            `profiles/${Date.now().toString()}${path.extname(file.originalname)}`,
-        );
-    },
-});
-
-// 게시글 이미지용 S3 저장소 설정
-const postStorage = multerS3({
+// 상품 이미지용 S3 저장소 설정
+const productStorage = multerS3({
     s3,
     bucket: process.env.AWS_BUCKET_NAME,
     acl: 'public-read',
     key(req, file, cb) {
         cb(
             null,
-            `posts/${Date.now().toString()}${path.extname(file.originalname)}`,
+            `products/${Date.now().toString()}${path.extname(file.originalname)}`,
         );
     },
 });
@@ -55,23 +43,14 @@ const fileFilter = (req, file, cb) => {
     }
 };
 
-// 프로필 이미지 업로드 설정
-const uploadProfile = multer({
-    storage: profileStorage,
+// 상품 이미지 업로드 설정 (여러 파일, 최대 50개)
+const uploadProductImages = multer({
+    storage: productStorage,
     fileFilter,
     limits: {
-        fileSize: 150 * 1024 * 1024,
-        files: 1,
+        fileSize: 10 * 1024 * 1024, // 파일당 10MB
+        files: 50, // 최대 50개 파일
     },
-}).single('img');
+}).array('images', 50); // 'images' 필드명으로 최대 50개
 
-// 게시글 이미지 업로드 설정
-const uploadPost = multer({
-    storage: postStorage,
-    fileFilter,
-    limits: {
-        fileSize: 150 * 1024 * 1024,
-        files: 1,
-    },
-}).single('img');
-export { uploadProfile, uploadPost };
+export { uploadProductImages };

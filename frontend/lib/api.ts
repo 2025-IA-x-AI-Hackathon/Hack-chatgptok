@@ -33,10 +33,9 @@ import type {
     PresignedUrlsResponse,
     ChatRoom,
     ChatRoomDetail,
-    ChatMessagesResponse,
+    ChatMessage,
     CreateChatRoomRequest,
     SendMessageRequest,
-    ChatMessage,
 } from "./types";
 
 // API Base URL
@@ -45,7 +44,7 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8
 // ============ 헬퍼 함수 ============
 
 /**
- * 로컬 스토리지에서 액세스 토큰 가져오기
+ * 세션 스토리지에서 JWT 토큰 가져오기
  */
 function getAccessToken(): string | null {
     if (typeof window === "undefined") return null;
@@ -130,7 +129,7 @@ async function apiRequest<T>(
 
         const envelope: ServerEnvelope<T> = await response.json();
 
-        if (!response.ok) {
+            // 성공 응답
             return {
                 success: false,
                 error: {
@@ -138,7 +137,17 @@ async function apiRequest<T>(
                     message: envelope.message || "알 수 없는 오류가 발생했습니다.",
                 },
             };
-        }
+        } else {
+            // JSON이 아닌 응답
+            if (!response.ok) {
+                return {
+                    success: false,
+                    error: {
+                        code: response.status.toString(),
+                        message: "서버 오류가 발생했습니다.",
+                    },
+                };
+            }
 
         // 서버 envelope에서 실제 데이터 추출
         return {
@@ -416,7 +425,11 @@ export const uploadApi = {
             true // 인증 필요
         );
     },
+};
 
+// ============ 사용자 API ============
+
+export const userApi = {
     /**
      * S3에 파일 업로드
      */

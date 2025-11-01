@@ -1,0 +1,123 @@
+/**
+ * Clean UI - Hide all PCUI controls for embedded viewer
+ *
+ * This stylesheet hides all UI elements to show only the 3D viewer
+ * Perfect for embedding in product galleries with auto-rotate
+ */
+
+/* Hide all PCUI panels and controls */
+.pcui-panel,
+.panel-left,
+.panel-right,
+.panel-top,
+.panel-bottom,
+.settings-panel,
+.control-panel,
+.controls-overlay,
+.pcui-container {
+    display: none !important;
+}
+
+/* Hide camera mode buttons (orbit/fly) */
+.camera-controls,
+.camera-mode-button,
+.orbit-mode-button,
+.fly-mode-button {
+    display: none !important;
+}
+
+/* Hide skybox selector */
+.skybox-selector,
+.skybox-controls,
+.environment-selector {
+    display: none !important;
+}
+
+/* Hide settings button and menu */
+.settings-button,
+.settings-menu,
+.settings-icon,
+button[title*="Settings"],
+button[aria-label*="Settings"] {
+    display: none !important;
+}
+
+/* Hide file loader/drop zone UI */
+.file-upload,
+.drop-zone,
+.file-input,
+.load-button {
+    display: none !important;
+}
+
+/* Hide debug/stats panel */
+.stats-panel,
+.debug-panel,
+.fps-counter {
+    display: none !important;
+}
+
+/* Hide any overlay controls */
+.overlay-controls,
+.ui-overlay,
+.control-overlay {
+    display: none !important;
+}
+
+/* Hide AR/VR buttons if present */
+.ar-button,
+.vr-button,
+.xr-button {
+    display: none !important;
+}
+
+/* Hide fullscreen button */
+.fullscreen-button,
+button[title*="Fullscreen"],
+button[aria-label*="Fullscreen"] {
+    display: none !important;
+}
+
+/* Hide loading spinner after load (optional - keep if needed) */
+/* .loading-spinner {
+    display: none !important;
+} */
+
+/* Ensure canvas takes full container */
+canvas {
+    width: 100% !important;
+    height: 100% !important;
+    display: block !important;
+}
+
+/* Make app container full size */
+#app,
+#application-canvas,
+.viewer-container {
+    width: 100% !important;
+    height: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+}
+
+/* Remove any margins/padding from body */
+body {
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: hidden !important;
+}
+
+/* Hide any tooltips or popovers */
+.tooltip,
+.popover,
+.hint,
+.pcui-tooltip {
+    display: none !important;
+}
+
+/* Clean viewer - no decorations */
+* {
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    user-select: none;
+}

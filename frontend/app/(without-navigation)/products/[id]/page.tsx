@@ -128,6 +128,10 @@ export default function ProductDetailPage({ params } : {
     const [carouselApi, setCarouselApi] = useState<CarouselApi>();
     const [currentImageIndex, setCurrentImageIndex] = useState(0);
     const [isMenuOpen, setIsMenuOpen] = useState(false);
+    const [isChatLoading, setIsChatLoading] = useState(false);
+
+    // 진행 중인 요청을 추적하여 중복 호출 방지
+    const requestRef = useRef<{ productId: string; promise: Promise<any> } | null>(null);
 
     useEffect(() => {
         if (!carouselApi) {
@@ -452,7 +456,7 @@ export default function ProductDetailPage({ params } : {
                             <p className="font-medium">{product.seller_nickname}</p>
                         </div>
                     </div>
-                </div>
+                )}
 
                 {/* 상품 정보 */}
                 <div className="p-4 border-b">
@@ -516,8 +520,12 @@ export default function ProductDetailPage({ params } : {
                             className={`w-6 h-6 ${isLiked ? "fill-current" : ""}`}
                         />
                     </button>
-                    <button className="flex-1 bg-primary text-primary-foreground py-3 rounded-lg font-medium hover:bg-primary/90 transition-colors">
-                        채팅하기
+                    <button
+                        onClick={handleStartChat}
+                        disabled={isChatLoading}
+                        className="flex-1 bg-primary text-primary-foreground py-3 rounded-lg font-medium hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                        {isChatLoading ? "채팅방 생성 중..." : "채팅하기"}
                     </button>
                 </div>
             </div>

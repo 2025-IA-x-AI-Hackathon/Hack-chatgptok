@@ -158,41 +158,54 @@ export interface PresignedUrlsResponse {
 
 // ============ 채팅 타입 ============
 export interface ChatRoom {
-    roomId: string;
-    product: {
-        id: number;
-        title: string;
-        thumbnail: string;
-        price: number;
-    };
-    otherUser: User;
-    lastMessage?: ChatMessage;
-    unreadCount: number;
-}
-
-export interface ChatMessage {
-    id: string;
-    senderId: number;
-    content: string;
-    createdAt: string;
-    isRead: boolean;
+    room_id: number;
+    product_id: string;
+    buyer_id: number;
+    seller_id: number;
+    created_at: string;
+    updated_at: string;
+    product_name: string;
+    product_price: number;
+    product_thumbnail?: string;
+    other_user_name: string;
+    other_user_img?: string;
+    other_user_id: number;
+    user_type: 'buyer' | 'seller';
+    last_message?: string;
+    last_message_time?: string;
+    unread_count: number;
 }
 
 export interface ChatRoomDetail {
-    roomId: string;
-    productId: number;
-    seller: User;
-    buyer: User;
-    createdAt: string;
+    room_id: number;
+    product_id: string;
+    buyer_id: number;
+    seller_id: number;
+    created_at: string;
+    updated_at: string;
+    product_name: string;
+    product_price: number;
+    product_thumbnail?: string;
+    other_user_name: string;
+    other_user_img?: string;
+    other_user_id: number;
+    buyer_nickname: string;
+    seller_nickname: string;
 }
 
-export interface ChatMessagesResponse {
-    messages: ChatMessage[];
-    pagination: Pagination;
+export interface ChatMessage {
+    msg_id: number;
+    room_id: number;
+    sender_id: number;
+    content: string;
+    created_at: string;
+    is_read: boolean;
+    sender_nickname?: string;
+    sender_img?: string;
 }
 
 export interface CreateChatRoomRequest {
-    productId: number;
+    productId: string;
 }
 
 export interface SendMessageRequest {
