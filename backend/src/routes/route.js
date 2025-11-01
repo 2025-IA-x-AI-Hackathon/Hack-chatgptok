@@ -5,6 +5,7 @@ import productController from '../controllers/productController.js';
 import authController from '../controllers/authController.js';
 import chatController from '../controllers/chatController.js';
 import uploadController from '../controllers/uploadController.js';
+import notificationController from '../controllers/notificationController.js';
 
 // middleware
 import { authenticateToken } from '../middleware/authMiddleware.js';
@@ -1460,12 +1461,892 @@ router.delete('/products/:productId/like', authenticateToken, productController.
 
 
 // Chat routes
+/**
+ * @swagger
+ * /api/v1/chat/rooms:
+ *   post:
+ *     summary: 채팅방 생성 또는 조회
+ *     description: 상품에 대한 채팅방을 생성하거나 이미 존재하는 경우 기존 채팅방을 반환합니다.
+ *     tags: [Chat]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - productId
+ *             properties:
+ *               productId:
+ *                 type: string
+ *                 format: uuid
+ *                 example: 550e8400-e29b-41d4-a716-446655440000
+ *     responses:
+ *       200:
+ *         description: 채팅방 생성/조회 성공
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     chat_room_id:
+ *                       type: integer
+ *                       example: 1
+ *                     product_id:
+ *                       type: string
+ *                       example: 550e8400-e29b-41d4-a716-446655440000
+ *                     buyer_id:
+ *                       type: integer
+ *                       example: 2
+ *                     created_at:
+ *                       type: string
+ *                       format: date-time
+ *       400:
+ *         description: 잘못된 요청 (상품 ID 누락 또는 자신의 상품)
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 message:
+ *                   type: string
+ *                   example: 상품 ID가 필요합니다.
+ *       401:
+ *         description: 인증 필요
+ *       404:
+ *         description: 상품을 찾을 수 없음
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 message:
+ *                   type: string
+ *                   example: 상품을 찾을 수 없습니다.
+ *       500:
+ *         description: 서버 에러
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 message:
+ *                   type: string
+ *                   example: 서버 오류가 발생했습니다.
+ */
 router.post('/chat/rooms', authenticateToken, chatController.createOrGetChatRoom);
+
+/**
+ * @swagger
+ * /api/v1/chat/rooms:
+ *   get:
+ *     summary: 채팅방 목록 조회
+ *     description: 인증된 사용자의 모든 채팅방 목록을 조회합니다.
+ *     tags: [Chat]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: 채팅방 목록 조회 성공
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       chat_room_id:
+ *                         type: integer
+ *                         example: 1
+ *                       product_id:
+ *                         type: string
+ *                         example: 550e8400-e29b-41d4-a716-446655440000
+ *                       product_name:
+ *                         type: string
+ *                         example: 멋진 상품
+ *                       product_price:
+ *                         type: integer
+ *                         example: 50000
+ *                       product_image:
+ *                         type: string
+ *                         example: https://example.com/image.jpg
+ *                       other_user_id:
+ *                         type: integer
+ *                         example: 3
+ *                       other_user_nickname:
+ *                         type: string
+ *                         example: 홍길동
+ *                       other_user_img:
+ *                         type: string
+ *                         nullable: true
+ *                         example: https://example.com/profile.jpg
+ *                       last_message:
+ *                         type: string
+ *                         nullable: true
+ *                         example: 안녕하세요
+ *                       last_message_at:
+ *                         type: string
+ *                         format: date-time
+ *                         nullable: true
+ *                       unread_count:
+ *                         type: integer
+ *                         example: 2
+ *       401:
+ *         description: 인증 필요
+ *       500:
+ *         description: 서버 에러
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 message:
+ *                   type: string
+ *                   example: 서버 오류가 발생했습니다.
+ */
 router.get('/chat/rooms', authenticateToken, chatController.getChatRooms);
+
+/**
+ * @swagger
+ * /api/v1/chat/rooms/{chatRoomId}:
+ *   get:
+ *     summary: 채팅방 상세 조회
+ *     description: 특정 채팅방의 상세 정보를 조회합니다.
+ *     tags: [Chat]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: chatRoomId
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: 채팅방 ID
+ *         example: 1
+ *     responses:
+ *       200:
+ *         description: 채팅방 상세 조회 성공
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     chat_room_id:
+ *                       type: integer
+ *                       example: 1
+ *                     product_id:
+ *                       type: string
+ *                       example: 550e8400-e29b-41d4-a716-446655440000
+ *                     product_name:
+ *                       type: string
+ *                       example: 멋진 상품
+ *                     product_price:
+ *                       type: integer
+ *                       example: 50000
+ *                     product_image:
+ *                       type: string
+ *                       example: https://example.com/image.jpg
+ *                     seller:
+ *                       type: object
+ *                       properties:
+ *                         member_id:
+ *                           type: integer
+ *                           example: 1
+ *                         nickname:
+ *                           type: string
+ *                           example: 판매자
+ *                         img:
+ *                           type: string
+ *                           nullable: true
+ *                     buyer:
+ *                       type: object
+ *                       properties:
+ *                         member_id:
+ *                           type: integer
+ *                           example: 2
+ *                         nickname:
+ *                           type: string
+ *                           example: 구매자
+ *                         img:
+ *                           type: string
+ *                           nullable: true
+ *       401:
+ *         description: 인증 필요
+ *       404:
+ *         description: 채팅방을 찾을 수 없거나 접근 권한이 없음
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 message:
+ *                   type: string
+ *                   example: 채팅방을 찾을 수 없거나 접근 권한이 없습니다.
+ *       500:
+ *         description: 서버 에러
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 message:
+ *                   type: string
+ *                   example: 서버 오류가 발생했습니다.
+ */
 router.get('/chat/rooms/:chatRoomId', authenticateToken, chatController.getChatRoomDetail);
+
+/**
+ * @swagger
+ * /api/v1/chat/rooms/{chatRoomId}/messages:
+ *   get:
+ *     summary: 메시지 목록 조회
+ *     description: 특정 채팅방의 메시지 목록을 조회합니다. 조회 시 자동으로 읽음 처리됩니다.
+ *     tags: [Chat]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: chatRoomId
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: 채팅방 ID
+ *         example: 1
+ *     responses:
+ *       200:
+ *         description: 메시지 목록 조회 성공
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       message_id:
+ *                         type: integer
+ *                         example: 1
+ *                       chat_room_id:
+ *                         type: integer
+ *                         example: 1
+ *                       sender_id:
+ *                         type: integer
+ *                         example: 2
+ *                       sender_nickname:
+ *                         type: string
+ *                         example: 홍길동
+ *                       content:
+ *                         type: string
+ *                         example: 안녕하세요
+ *                       is_read:
+ *                         type: boolean
+ *                         example: true
+ *                       created_at:
+ *                         type: string
+ *                         format: date-time
+ *       401:
+ *         description: 인증 필요
+ *       403:
+ *         description: 접근 권한 없음
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 message:
+ *                   type: string
+ *                   example: 접근 권한이 없습니다.
+ *       500:
+ *         description: 서버 에러
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 message:
+ *                   type: string
+ *                   example: 서버 오류가 발생했습니다.
+ */
 router.get('/chat/rooms/:chatRoomId/messages', authenticateToken, chatController.getMessages);
+
+/**
+ * @swagger
+ * /api/v1/chat/rooms/{chatRoomId}/messages:
+ *   post:
+ *     summary: 메시지 전송
+ *     description: 특정 채팅방에 메시지를 전송합니다.
+ *     tags: [Chat]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: chatRoomId
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: 채팅방 ID
+ *         example: 1
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - content
+ *             properties:
+ *               content:
+ *                 type: string
+ *                 example: 안녕하세요, 이 상품 구매하고 싶습니다.
+ *     responses:
+ *       201:
+ *         description: 메시지 전송 성공
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     message_id:
+ *                       type: integer
+ *                       example: 1
+ *                     chat_room_id:
+ *                       type: integer
+ *                       example: 1
+ *                     sender_id:
+ *                       type: integer
+ *                       example: 2
+ *                     content:
+ *                       type: string
+ *                       example: 안녕하세요
+ *                     is_read:
+ *                       type: boolean
+ *                       example: false
+ *                     created_at:
+ *                       type: string
+ *                       format: date-time
+ *       400:
+ *         description: 잘못된 요청 (메시지 내용 누락)
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 message:
+ *                   type: string
+ *                   example: 메시지 내용이 필요합니다.
+ *       401:
+ *         description: 인증 필요
+ *       403:
+ *         description: 접근 권한 없음
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 message:
+ *                   type: string
+ *                   example: 접근 권한이 없습니다.
+ *       500:
+ *         description: 서버 에러
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 message:
+ *                   type: string
+ *                   example: 서버 오류가 발생했습니다.
+ */
 router.post('/chat/rooms/:chatRoomId/messages', authenticateToken, chatController.sendMessage);
+
+/**
+ * @swagger
+ * /api/v1/chat/rooms/{chatRoomId}/read:
+ *   post:
+ *     summary: 메시지 읽음 처리
+ *     description: 특정 채팅방의 모든 안 읽은 메시지를 읽음 처리합니다.
+ *     tags: [Chat]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: chatRoomId
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: 채팅방 ID
+ *         example: 1
+ *     responses:
+ *       200:
+ *         description: 읽음 처리 성공
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     count:
+ *                       type: integer
+ *                       description: 읽음 처리된 메시지 수
+ *                       example: 5
+ *       401:
+ *         description: 인증 필요
+ *       403:
+ *         description: 접근 권한 없음
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 message:
+ *                   type: string
+ *                   example: 접근 권한이 없습니다.
+ *       500:
+ *         description: 서버 에러
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 message:
+ *                   type: string
+ *                   example: 서버 오류가 발생했습니다.
+ */
 router.post('/chat/rooms/:chatRoomId/read', authenticateToken, chatController.markAsRead);
+
+// Notification routes
+/**
+ * @swagger
+ * /api/v1/notifications:
+ *   get:
+ *     summary: 알림 목록 조회
+ *     description: 인증된 사용자의 알림 목록을 조회합니다. 페이지네이션을 지원합니다.
+ *     tags: [Notifications]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           maximum: 100
+ *           default: 20
+ *         description: 조회할 알림 개수 (1-100)
+ *       - in: query
+ *         name: offset
+ *         schema:
+ *           type: integer
+ *           minimum: 0
+ *           default: 0
+ *         description: 건너뛸 알림 개수
+ *       - in: query
+ *         name: unreadOnly
+ *         schema:
+ *           type: boolean
+ *           default: false
+ *         description: true일 경우 읽지 않은 알림만 조회
+ *     responses:
+ *       200:
+ *         description: 알림 목록 조회 성공
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     notifications:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           notif_id:
+ *                             type: integer
+ *                             example: 1
+ *                           member_id:
+ *                             type: integer
+ *                             example: 2
+ *                           type:
+ *                             type: string
+ *                             enum: [CHAT, LIKE, PRODUCT_STATUS]
+ *                             example: CHAT
+ *                           title:
+ *                             type: string
+ *                             example: 새로운 메시지가 도착했습니다.
+ *                           content:
+ *                             type: string
+ *                             example: 홍길동님이 메시지를 보냈습니다.
+ *                           related_id:
+ *                             type: string
+ *                             nullable: true
+ *                             example: 550e8400-e29b-41d4-a716-446655440000
+ *                           is_read:
+ *                             type: boolean
+ *                             example: false
+ *                           created_at:
+ *                             type: string
+ *                             format: date-time
+ *                     total:
+ *                       type: integer
+ *                       example: 50
+ *                     hasMore:
+ *                       type: boolean
+ *                       example: true
+ *       400:
+ *         description: 잘못된 요청 (유효하지 않은 limit 또는 offset 값)
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 message:
+ *                   type: string
+ *                   example: limit은 1에서 100 사이의 값이어야 합니다.
+ *       401:
+ *         description: 인증 필요
+ *       500:
+ *         description: 서버 에러
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 message:
+ *                   type: string
+ *                   example: 서버 오류가 발생했습니다.
+ */
+router.get('/notifications', authenticateToken, notificationController.getNotifications);
+
+/**
+ * @swagger
+ * /api/v1/notifications/unread-count:
+ *   get:
+ *     summary: 읽지 않은 알림 개수 조회
+ *     description: 인증된 사용자의 읽지 않은 알림 개수를 조회합니다.
+ *     tags: [Notifications]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: 읽지 않은 알림 개수 조회 성공
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     count:
+ *                       type: integer
+ *                       example: 5
+ *       401:
+ *         description: 인증 필요
+ *       500:
+ *         description: 서버 에러
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 message:
+ *                   type: string
+ *                   example: 서버 오류가 발생했습니다.
+ */
+router.get('/notifications/unread-count', authenticateToken, notificationController.getUnreadCount);
+
+/**
+ * @swagger
+ * /api/v1/notifications/{notifId}/read:
+ *   patch:
+ *     summary: 특정 알림 읽음 처리
+ *     description: 특정 알림을 읽음 상태로 변경합니다.
+ *     tags: [Notifications]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: notifId
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: 알림 ID
+ *         example: 1
+ *     responses:
+ *       200:
+ *         description: 알림 읽음 처리 성공
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     notif_id:
+ *                       type: integer
+ *                       example: 1
+ *                     is_read:
+ *                       type: boolean
+ *                       example: true
+ *       400:
+ *         description: 잘못된 요청 (유효하지 않은 알림 ID)
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 message:
+ *                   type: string
+ *                   example: 유효한 알림 ID가 필요합니다.
+ *       401:
+ *         description: 인증 필요
+ *       404:
+ *         description: 알림을 찾을 수 없거나 이미 읽은 알림
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 message:
+ *                   type: string
+ *                   example: 알림을 찾을 수 없거나 이미 읽은 알림입니다.
+ *       500:
+ *         description: 서버 에러
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 message:
+ *                   type: string
+ *                   example: 서버 오류가 발생했습니다.
+ */
+router.patch('/notifications/:notifId/read', authenticateToken, notificationController.markAsRead);
+
+/**
+ * @swagger
+ * /api/v1/notifications/read-all:
+ *   patch:
+ *     summary: 모든 알림 읽음 처리
+ *     description: 인증된 사용자의 모든 읽지 않은 알림을 읽음 상태로 변경합니다.
+ *     tags: [Notifications]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: 모든 알림 읽음 처리 성공
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     count:
+ *                       type: integer
+ *                       description: 읽음 처리된 알림 수
+ *                       example: 10
+ *       401:
+ *         description: 인증 필요
+ *       500:
+ *         description: 서버 에러
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 message:
+ *                   type: string
+ *                   example: 서버 오류가 발생했습니다.
+ */
+router.patch('/notifications/read-all', authenticateToken, notificationController.markAllAsRead);
+
+/**
+ * @swagger
+ * /api/v1/notifications/{notifId}:
+ *   delete:
+ *     summary: 알림 삭제
+ *     description: 특정 알림을 삭제합니다.
+ *     tags: [Notifications]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: notifId
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: 알림 ID
+ *         example: 1
+ *     responses:
+ *       200:
+ *         description: 알림 삭제 성공
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: 알림이 삭제되었습니다.
+ *       400:
+ *         description: 잘못된 요청 (유효하지 않은 알림 ID)
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 message:
+ *                   type: string
+ *                   example: 유효한 알림 ID가 필요합니다.
+ *       401:
+ *         description: 인증 필요
+ *       404:
+ *         description: 알림을 찾을 수 없음
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 message:
+ *                   type: string
+ *                   example: 알림을 찾을 수 없습니다.
+ *       500:
+ *         description: 서버 에러
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 message:
+ *                   type: string
+ *                   example: 서버 오류가 발생했습니다.
+ */
+router.delete('/notifications/:notifId', authenticateToken, notificationController.deleteNotification);
 
 // TODO: 추가 기능 라우트
 // - AI 상품 설명 자동 생성
@@ -1473,9 +2354,5 @@ router.post('/chat/rooms/:chatRoomId/read', authenticateToken, chatController.ma
 
 // AI description generation route
 router.post('/products/ai/generate-description', productController.generateDescription);
-
-// TODO: 추가 기능 라우트
-// - 채팅 기능
-// - 알림 기능
 
 export default router;
