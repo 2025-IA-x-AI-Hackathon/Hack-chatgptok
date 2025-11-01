@@ -18,6 +18,11 @@ const ProductController = {
                 return res.status(400).json({ error: 'Name and price are required' });
             }
 
+            // 이미지 URL 확인
+            if (!imageUrls || !Array.isArray(imageUrls) || imageUrls.length === 0) {
+                return res.status(400).json({ error: 'At least one image URL is required' });
+            }
+
             await connection.beginTransaction();
 
             // 1. 상품 생성
@@ -28,10 +33,8 @@ const ProductController = {
                 description,
             });
 
-            // 2. 이미지 추가
-            if (imageUrls && imageUrls.length > 0) {
-                await ProductModel.addProductImagesWithConnection(connection, productId, imageUrls);
-            }
+            // 2. 이미지 URL DB 저장
+            await ProductModel.addProductImagesWithConnection(connection, productId, imageUrls);
 
             // 3. AI 상품 설명 자동 생성 큐 등록
             // await JobModel.createDescriptionJobWithConnection(connection, productId);
@@ -50,6 +53,7 @@ const ProductController = {
             res.status(201).json({
                 message: 'Product created successfully',
                 productId,
+                imageUrls,
             });
         } catch (error) {
             await connection.rollback();
