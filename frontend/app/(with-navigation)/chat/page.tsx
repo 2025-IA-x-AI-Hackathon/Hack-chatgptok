@@ -23,8 +23,8 @@ export default function ChatPage() {
         setLoading(true);
         const response = await chatApi.getChatRooms();
 
-        if (response.success && response.data?.data) {
-          setChatRooms(response.data.data);
+        if (response.success && response.data) {
+          setChatRooms(response.data);
         } else {
           setError(response.error?.message || "채팅방을 불러오는데 실패했습니다.");
         }

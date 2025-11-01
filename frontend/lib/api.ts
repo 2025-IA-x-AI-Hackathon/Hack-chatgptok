@@ -47,11 +47,11 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8
 // ============ 헬퍼 함수 ============
 
 /**
- * 로컬 스토리지에서 액세스 토큰 가져오기
+ * 세션 스토리지에서 액세스 토큰 가져오기
  */
 function getAccessToken(): string | null {
     if (typeof window === "undefined") return null;
-    return localStorage.getItem("accessToken");
+    return sessionStorage.getItem("accessToken");
 }
 
 /**
@@ -59,7 +59,7 @@ function getAccessToken(): string | null {
  */
 function setAccessToken(token: string): void {
     if (typeof window === "undefined") return;
-    localStorage.setItem("accessToken", token);
+    sessionStorage.setItem("accessToken", token);
     // 쿠키에도 저장 (middleware에서 사용)
     document.cookie = `accessToken=${token}; path=/; max-age=${60 * 60 * 24 * 7}`; // 7일
 }
@@ -69,7 +69,7 @@ function setAccessToken(token: string): void {
  */
 function getRefreshToken(): string | null {
     if (typeof window === "undefined") return null;
-    return localStorage.getItem("refreshToken");
+    return sessionStorage.getItem("refreshToken");
 }
 
 /**
@@ -77,7 +77,7 @@ function getRefreshToken(): string | null {
  */
 function setRefreshToken(token: string): void {
     if (typeof window === "undefined") return;
-    localStorage.setItem("refreshToken", token);
+    sessionStorage.setItem("refreshToken", token);
     // 쿠키에도 저장 (middleware에서 사용)
     document.cookie = `refreshToken=${token}; path=/; max-age=${60 * 60 * 24 * 30}`; // 30일
 }
@@ -85,10 +85,10 @@ function setRefreshToken(token: string): void {
 /**
  * 토큰 제거 (로그아웃 시)
  */
-function clearTokens(): void {
+export function clearTokens(): void {
     if (typeof window === "undefined") return;
-    localStorage.removeItem("accessToken");
-    localStorage.removeItem("refreshToken");
+    sessionStorage.removeItem("accessToken");
+    sessionStorage.removeItem("refreshToken");
     // 쿠키에서도 제거
     document.cookie = "accessToken=; path=/; max-age=0";
     document.cookie = "refreshToken=; path=/; max-age=0";
@@ -339,18 +339,26 @@ export const authApi = {
      * 로그아웃
      */
     logout: async (): Promise<ApiResponse<{ message: string }>> => {
-        return apiRequest<{ message: string }>(
+        const response = await apiRequest<{ message: string }>(
             "/auth/logout",
             {
                 method: "POST",
-            }
+            },
+            true // 인증 필요
         );
+
+        // 로그아웃 성공 시 토큰 제거
+        if (response.success) {
+            clearTokens();
+        }
+
+        return response;
     },
 
     getMe: async (): Promise<ApiResponse<{ user: User }>> => {
         return apiRequest<{ user: User }>("/auth/me", {
             method: "GET",
-        });
+        }, true); // 인증 필요
     },
 };
 
@@ -583,8 +591,8 @@ export const chatApi = {
     /**
      * 채팅방 목록 조회
      */
-    getChatRooms: async (): Promise<ApiResponse<{ data: ChatRoom[] }>> => {
-        return apiRequest<{ data: ChatRoom[] }>(
+    getChatRooms: async (): Promise<ApiResponse<ChatRoom[]>> => {
+        return apiRequest<ChatRoom[]>(
             "/chat/rooms",
             {
                 method: "GET",
@@ -597,8 +605,8 @@ export const chatApi = {
      */
     getChatRoomDetail: async (
         chatRoomId: string
-    ): Promise<ApiResponse<{ data: ChatRoomDetail }>> => {
-        return apiRequest<{ data: ChatRoomDetail }>(
+    ): Promise<ApiResponse<ChatRoomDetail>> => {
+        return apiRequest<ChatRoomDetail>(
             `/chat/rooms/${chatRoomId}`,
             {
                 method: "GET",
@@ -612,8 +620,8 @@ export const chatApi = {
      */
     getMessages: async (
         chatRoomId: string
-    ): Promise<ApiResponse<{ data: ChatMessage[] }>> => {
-        return apiRequest<{ data: ChatMessage[] }>(
+    ): Promise<ApiResponse<ChatMessage[]>> => {
+        return apiRequest<ChatMessage[]>(
             `/chat/rooms/${chatRoomId}/messages`,
             {
                 method: "GET",

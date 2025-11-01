@@ -182,6 +182,48 @@ router.post('/auth/logout', authenticateToken, authController.logout);
 
 /**
  * @swagger
+ * /api/v1/auth/me:
+ *   get:
+ *     summary: 현재 로그인한 사용자 정보 조회
+ *     tags: [Auth]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: 사용자 정보 조회 성공
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     user:
+ *                       type: object
+ *                       properties:
+ *                         member_id:
+ *                           type: integer
+ *                         email:
+ *                           type: string
+ *                         nickname:
+ *                           type: string
+ *                         img:
+ *                           type: string
+ *                         created_at:
+ *                           type: string
+ *                         updated_at:
+ *                           type: string
+ *       401:
+ *         description: 인증 필요
+ */
+router.get('/auth/me', authenticateToken, userController.getMe);
+
+/**
+ * @swagger
  * /api/v1/auth/refresh:
  *   post:
  *     summary: 토큰 갱신
