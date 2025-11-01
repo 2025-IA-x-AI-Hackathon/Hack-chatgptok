@@ -3,7 +3,7 @@ import express from 'express';
 import userController from '../controllers/userController.js';
 import productController from '../controllers/productController.js';
 import authController from '../controllers/authController.js';
-import uploadController, { upload } from '../controllers/uploadController.js';
+import uploadController from '../controllers/uploadController.js';
 
 // middleware
 import isAuthenticated from '../middleware/auth.js';
@@ -257,6 +257,119 @@ router.get('/auth/me', authenticateToken, authController.getMe);
 
 /**
  * @swagger
+ * /api/v1/upload/presigned-url:
+ *   get:
+ *     summary: 단일 파일 업로드를 위한 Pre-signed URL 생성
+ *     tags: [Upload]
+ *     security:
+ *       - cookieAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: filename
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: 파일명
+ *         example: photo.jpg
+ *       - in: query
+ *         name: contentType
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: 파일 MIME 타입
+ *         example: image/jpeg
+ *     responses:
+ *       200:
+ *         description: Pre-signed URL 생성 성공
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 uploadUrl:
+ *                   type: string
+ *                   description: S3 업로드용 임시 URL
+ *                 fileUrl:
+ *                   type: string
+ *                   description: 업로드 후 접근할 최종 URL
+ *                 key:
+ *                   type: string
+ *                   description: S3 객체 키
+ *                 expiresIn:
+ *                   type: integer
+ *                   description: URL 유효 시간(초)
+ *       400:
+ *         description: 잘못된 요청
+ *       401:
+ *         description: 인증 필요
+ */
+router.get('/upload/presigned-url', authenticateToken, uploadController.getPresignedUrl);
+
+/**
+ * @swagger
+ * /api/v1/upload/presigned-urls:
+ *   post:
+ *     summary: 여러 파일 업로드를 위한 Pre-signed URL 일괄 생성
+ *     tags: [Upload]
+ *     security:
+ *       - cookieAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - files
+ *             properties:
+ *               files:
+ *                 type: array
+ *                 description: 업로드할 파일 정보 배열 (최대 50개)
+ *                 maxItems: 50
+ *                 items:
+ *                   type: object
+ *                   required:
+ *                     - filename
+ *                     - contentType
+ *                   properties:
+ *                     filename:
+ *                       type: string
+ *                       example: photo1.jpg
+ *                     contentType:
+ *                       type: string
+ *                       example: image/jpeg
+ *     responses:
+ *       200:
+ *         description: Pre-signed URL 생성 성공
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 uploads:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       originalFilename:
+ *                         type: string
+ *                       uploadUrl:
+ *                         type: string
+ *                       fileUrl:
+ *                         type: string
+ *                       key:
+ *                         type: string
+ *                 expiresIn:
+ *                   type: integer
+ *       400:
+ *         description: 잘못된 요청
+ *       401:
+ *         description: 인증 필요
+ */
+router.post('/upload/presigned-urls', authenticateToken, uploadController.getMultiplePresignedUrls);
+
+/**
+ * @swagger
  * /api/v1/users/profile:
  *   get:
  *     summary: 내 프로필 조회
@@ -374,7 +487,15 @@ router.get('/products/:productId', productController.getProductById);
  * @swagger
  * /api/v1/products:
  *   post:
- *     summary: 상품 등록
+ *     summary: 상품 등록 (Pre-signed URL 방식)
+ *     description: |
+ *       상품을 등록합니다. 이미지는 먼저 /upload/presigned-urls API로 S3에 업로드한 후,
+ *       업로드된 이미지 URL을 이 API에 전달해야 합니다.
+ *
+ *       ## 사용 흐름:
+ *       1. POST /api/v1/upload/presigned-urls - Pre-signed URL 받기
+ *       2. 각 Pre-signed URL로 이미지 업로드 (클라이언트 → S3 직접)
+ *       3. POST /api/v1/products - 업로드된 이미지 URL과 함께 상품 등록
  *     tags: [Products]
  *     security:
  *       - cookieAuth: []
@@ -385,25 +506,47 @@ router.get('/products/:productId', productController.getProductById);
  *           schema:
  *             type: object
  *             required:
- *               - title
- *               - description
+ *               - name
  *               - price
+ *               - imageUrls
  *             properties:
- *               title:
+ *               name:
  *                 type: string
  *                 example: 멋진 상품
  *               description:
  *                 type: string
- *                 example: 이 상품은 정말 멋집니다
+ *                 example: 이 상품은 정말 멋습니다
  *               price:
  *                 type: number
  *                 example: 10000
- *               image_url:
- *                 type: string
- *                 example: https://example.com/image.jpg
+ *               imageUrls:
+ *                 type: array
+ *                 description: S3에 업로드된 이미지 URL 배열 (최소 1개, 최대 50개)
+ *                 minItems: 1
+ *                 maxItems: 50
+ *                 items:
+ *                   type: string
+ *                   example: https://bucket.s3.amazonaws.com/products/123456.jpg
  *     responses:
  *       201:
  *         description: 상품 등록 성공
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Product created successfully
+ *                 productId:
+ *                   type: integer
+ *                   example: 123
+ *                 imageUrls:
+ *                   type: array
+ *                   items:
+ *                     type: string
+ *       400:
+ *         description: 잘못된 요청 (필수 필드 누락, 이미지 URL 없음)
  *       401:
  *         description: 인증 필요
  */
