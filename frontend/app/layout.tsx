@@ -81,7 +81,7 @@ export default function RootLayout({
         className={`${pretendard.className} antialiased`}
       >
         {/* 정적 Splash 화면 */}
-        <div id="splash-screen">
+        <div id="splash-screen" suppressHydrationWarning>
           <img id="splash-logo" src="/logo.png" alt="Scan&Sell Logo" />
           <h1 id="splash-text">Scan&Sell</h1>
         </div>
