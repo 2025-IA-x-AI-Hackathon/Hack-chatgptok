@@ -12,10 +12,8 @@ from app.config import settings
 
 def create_job(
     db: Session,
-    job_id: str,
-    pub_key: str,
+    product_id: str,
     image_count: int = 0,
-    original_resolution: bool = False,
     iterations: int = None
 ) -> Job:
     """Create a new job in database"""
@@ -24,11 +22,9 @@ def create_job(
         iterations = settings.TRAINING_ITERATIONS
 
     job = Job(
-        job_id=job_id,
-        pub_key=pub_key,
+        product_id=product_id,
         status="PENDING",
         image_count=image_count,
-        original_resolution=original_resolution,
         iterations=iterations,
         created_at=datetime.utcnow()
     )
@@ -38,25 +34,20 @@ def create_job(
     return job
 
 
-def get_job_by_id(db: Session, job_id: str) -> Optional[Job]:
-    """Get job by job_id"""
-    return db.query(Job).filter(Job.job_id == job_id).first()
-
-
-def get_job_by_pub_key(db: Session, pub_key: str) -> Optional[Job]:
-    """Get job by public key"""
-    return db.query(Job).filter(Job.pub_key == pub_key).first()
+def get_job_by_product_id(db: Session, product_id: str) -> Optional[Job]:
+    """Get job by product_id"""
+    return db.query(Job).filter(Job.product_id == product_id).first()
 
 
 def update_job_status(
     db: Session,
-    job_id: str,
+    product_id: str,
     status: str,
     error_message: Optional[str] = None,
     error_stage: Optional[str] = None
 ) -> Optional[Job]:
     """Update job status"""
-    job = get_job_by_id(db, job_id)
+    job = get_job_by_product_id(db, product_id)
     if not job:
         return None
 
@@ -81,12 +72,12 @@ def update_job_status(
 
 def update_job_step(
     db: Session,
-    job_id: str,
+    product_id: str,
     step: str,
     progress: int
 ) -> Optional[Job]:
     """Update job step and progress (IMPLEMENT.md 섹션 E)"""
-    job = get_job_by_id(db, job_id)
+    job = get_job_by_product_id(db, product_id)
     if not job:
         return None
 
@@ -100,12 +91,12 @@ def update_job_step(
 
 def update_job_results(
     db: Session,
-    job_id: str,
+    product_id: str,
     colmap_registered_images: Optional[int] = None,
     colmap_points: Optional[int] = None
 ) -> Optional[Job]:
     """Update job results (MVP: COLMAP stats only)"""
-    job = get_job_by_id(db, job_id)
+    job = get_job_by_product_id(db, product_id)
     if not job:
         return None
 
@@ -119,9 +110,9 @@ def update_job_results(
     return job
 
 
-def increment_retry_count(db: Session, job_id: str) -> Optional[Job]:
+def increment_retry_count(db: Session, product_id: str) -> Optional[Job]:
     """Increment retry count for a job"""
-    job = get_job_by_id(db, job_id)
+    job = get_job_by_product_id(db, product_id)
     if not job:
         return None
 
@@ -146,14 +137,14 @@ def get_pending_jobs(db: Session) -> List[Job]:
     return db.query(Job).filter(Job.status == "PENDING").order_by(Job.created_at.asc()).all()
 
 
-def delete_job(db: Session, job_id: str) -> bool:
+def delete_job(db: Session, product_id: str) -> bool:
     """Delete a job"""
-    job = get_job_by_id(db, job_id)
+    job = get_job_by_product_id(db, product_id)
     if not job:
         return False
 
     # Delete associated error logs
-    db.query(ErrorLog).filter(ErrorLog.job_id == job_id).delete()
+    db.query(ErrorLog).filter(ErrorLog.product_id == product_id).delete()
 
     # Delete job
     db.delete(job)
@@ -165,7 +156,7 @@ def delete_job(db: Session, job_id: str) -> bool:
 
 def log_error(
     db: Session,
-    job_id: str,
+    product_id: str,
     stage: str,
     error_type: str,
     error_message: str,
@@ -173,7 +164,7 @@ def log_error(
 ) -> ErrorLog:
     """Log an error"""
     error_log = ErrorLog(
-        job_id=job_id,
+        product_id=product_id,
         stage=stage,
         error_type=error_type,
         error_message=error_message,
@@ -186,10 +177,10 @@ def log_error(
     return error_log
 
 
-def get_recent_errors(db: Session, job_id: str, limit: int = 10) -> List[ErrorLog]:
+def get_recent_errors(db: Session, product_id: str, limit: int = 10) -> List[ErrorLog]:
     """Get recent errors for a job"""
     return db.query(ErrorLog).filter(
-        ErrorLog.job_id == job_id
+        ErrorLog.product_id == product_id
     ).order_by(
         ErrorLog.timestamp.desc()
     ).limit(limit).all()

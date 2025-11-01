@@ -5,16 +5,23 @@ from pydantic import BaseModel, Field
 from typing import Optional, List
 
 
+class JobCreateRequest(BaseModel):
+    """Request schema for creating a job"""
+    product_id: str = Field(..., description="Product UUID")
+    s3_images: List[str] = Field(..., description="List of S3 image paths (s3://bucket/key)")
+    iterations: Optional[int] = Field(None, description="Training iterations (default: 10000)")
+
+
 class JobCreateResponse(BaseModel):
     """Response schema after creating a job"""
-    job_id: str
-    pub_key: str
-    original_resolution: bool
+    product_id: str
+    status: str
+    message: str
 
 
 class JobStatusResponse(BaseModel):
     """Response schema for job status"""
-    job_id: str
+    product_id: str
     status: str
     step: Optional[str] = None  # IMPLEMENT.md 섹션 E
     progress: Optional[int] = None  # IMPLEMENT.md 섹션 E (0-100)

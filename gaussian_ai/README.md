@@ -157,11 +157,11 @@ gaussian_ai/
 
 ### 작업 디렉토리 구조
 
-각 작업은 `data/jobs/{job_id}/` 디렉토리에 저장됩니다:
+각 작업은 `data/jobs/{product_id}/` 디렉토리에 저장됩니다:
 
 ```
-data/jobs/{job_id}/
-├── upload/images/              # 업로드된 원본 이미지
+data/jobs/{product_id}/
+├── upload/images/              # S3에서 다운로드한 이미지 (1600px로 리사이즈)
 │
 ├── colmap/                     # COLMAP 처리 결과
 │   ├── database.db            # COLMAP SQLite DB
@@ -200,66 +200,73 @@ data/jobs/{job_id}/
 |--------|----------|------|
 | GET | `/` | API 정보 및 버전 |
 | GET | `/healthz` | Health check (k8s/Docker 표준) |
-| POST | `/recon/jobs` | 새 작업 생성 (이미지 업로드) |
-| GET | `/recon/jobs/{job_id}/status` | 작업 상태 조회 (step, progress, metrics 포함) |
+| POST | `/recon/jobs` | 새 작업 생성 (**S3 이미지 경로**) |
+| GET | `/recon/jobs/{product_id}/status` | 작업 상태 조회 (step, progress 포함) |
 | GET | `/recon/queue` | 대기열 상태 조회 |
-| GET | `/recon/pub/{pub_key}/cloud.ply` | PLY 파일 다운로드 (GZIP 압축) |
-| GET | `/recon/pub/{pub_key}/scene.splat` | Splat 파일 다운로드 (deprecated) |
-| GET | `/v/{pub_key}` | 3D 뷰어 (일반 모드) |
-| GET | `/v/rotate/{pub_key}` | 3D 뷰어 (자동 회전 모드, 썸네일/프리뷰용) |
+| GET | `/recon/pub/{product_id}/cloud.ply` | PLY 파일 다운로드 (quality 옵션: light/medium/full) |
+| GET | `/recon/pub/{product_id}/scene.splat` | Splat 파일 다운로드 (deprecated) |
+| GET | `/v/{product_id}` | 3D 뷰어 (일반 모드) |
+| GET | `/v/rotate/{product_id}` | 3D 뷰어 (자동 회전 모드, 썸네일/프리뷰용) |
 | GET | `/viewer/` | PlayCanvas Model Viewer 직접 접근 |
 
-### 1. 작업 생성
+### 1. 작업 생성 (S3 이미지 경로 사용)
 
 ```bash
 curl -X POST http://localhost:8000/recon/jobs \
-  -F "files=@image1.jpg" \
-  -F "files=@image2.jpg" \
-  -F "files=@image3.jpg" \
-  -F "original_resolution=false" \
-  -F "iterations=10000"
+  -H "Content-Type: application/json" \
+  -d '{
+    "product_id": "550e8400-e29b-41d4-a716-446655440000",
+    "s3_images": [
+      "s3://my-bucket/products/image1.jpg",
+      "s3://my-bucket/products/image2.jpg",
+      "s3://my-bucket/products/image3.jpg"
+    ],
+    "iterations": 10000
+  }'
 ```
 
 **파라미터**:
-- `files`: 이미지 파일 (3~50장, 개별 30MB, 전체 500MB 제한)
-- `original_resolution`: 원본 해상도 사용 여부 (기본: false, 1600px로 리사이즈)
-- `iterations`: 학습 반복 횟수 (선택, 기본: 10000, 권장: 7000~30000)
+- `product_id` (필수): 제품 UUID (String, 36자)
+- `s3_images` (필수): S3 이미지 경로 리스트 (3~20장, `s3://bucket/key` 형식)
+- `iterations` (선택): 학습 반복 횟수 (기본: 10000, 권장: 7000~30000)
 
 **응답:**
 ```json
 {
-  "job_id": "6giVuAVu",
-  "pub_key": "tmb5Wy5OM9",
-  "original_resolution": false
+  "product_id": "550e8400-e29b-41d4-a716-446655440000",
+  "status": "PENDING",
+  "message": "Job created with 3 images"
 }
 ```
+
+**참고**: 이미지는 항상 1600px로 자동 리사이즈됩니다.
 
 ### 2. 작업 상태 확인
 
 ```bash
-curl http://localhost:8000/recon/jobs/6giVuAVu/status | jq
+curl http://localhost:8000/recon/jobs/550e8400-e29b-41d4-a716-446655440000/status | jq
 ```
 
-**응답 예시 (완료 시, MVP 최적화 후):**
+**응답 예시 (완료 시):**
 ```json
 {
-  "job_id": "6giVuAVu",
+  "product_id": "550e8400-e29b-41d4-a716-446655440000",
   "status": "COMPLETED",
   "step": "DONE",
   "progress": 100,
   "image_count": 17,
-  "iterations": 7000,
+  "iterations": 10000,
   "processing_time_seconds": 404.2,
   "colmap_registered_images": 17,
   "colmap_points": 25463,
-  "viewer_url": "http://localhost:8000/v/tmb5Wy5OM9",
+  "viewer_url": "http://localhost:8000/v/550e8400-e29b-41d4-a716-446655440000",
   "log_tail": [
-    ">> Outlier filtering complete!",
-    ">> Compressed point_cloud.ply: 6.2MB → 2.8MB (54.8% reduction)",
-    ">> Compressed point_cloud_filtered.ply: 6.0MB → 2.7MB (55.0% reduction)"
+    ">> [OPTIMIZE] Light version created: 0.52MB",
+    ">> [OPTIMIZE] Medium version created: 2.34MB",
+    ">> [SUCCESS] Job completed! Generated 127483 Gaussians"
   ],
-  "created_at": "2025-10-26T04:02:09.599000",
-  "completed_at": "2025-10-26T04:09:54.258000"
+  "created_at": "2025-11-02T04:02:09.599000",
+  "completed_at": "2025-11-02T04:09:54.258000"
 }
 ```
 
@@ -267,15 +274,20 @@ curl http://localhost:8000/recon/jobs/6giVuAVu/status | jq
 ### 3. 3D 뷰어 접근
 
 ```bash
-# 방법 1: Public key로 일반 뷰어 (사용자 상호작용 가능)
-http://localhost:8000/v/tmb5Wy5OM9
+# 방법 1: Product ID로 일반 뷰어 (사용자 상호작용 가능)
+http://localhost:8000/v/550e8400-e29b-41d4-a716-446655440000
 
 # 방법 2: 자동 회전 뷰어 (썸네일/프리뷰용, 입력 비활성화)
-http://localhost:8000/v/rotate/tmb5Wy5OM9
+http://localhost:8000/v/rotate/550e8400-e29b-41d4-a716-446655440000
 
-# 방법 3: 직접 PLY 파일 URL 전달
-http://localhost:8000/viewer/?load=http://localhost:8000/recon/pub/tmb5Wy5OM9/cloud.ply
+# 방법 3: 직접 PLY 파일 URL 전달 (품질 옵션 지정)
+http://localhost:8000/viewer/?load=http://localhost:8000/recon/pub/550e8400-e29b-41d4-a716-446655440000/cloud.ply?quality=medium
 ```
+
+**PLY 품질 옵션**:
+- `quality=light`: ~0.5MB (5% 샘플링, 썸네일용)
+- `quality=medium`: ~2-5MB (20% 샘플링, 리스트 뷰용)
+- `quality=full`: 전체 크기 (기본값, 상세 뷰용)
 
 **자동 회전 모드 특징**:
 - 120°/s 속도로 논스톱 회전
@@ -333,7 +345,7 @@ curl http://localhost:8000/healthz
 - ✅ 라이팅 및 환경 설정
 
 **접근 방법**:
-1. **Public key 사용**: `/v/{pub_key}` - 자동으로 PLY 파일 로드
+1. **Product ID 사용**: `/v/{product_id}` - 자동으로 PLY 파일 로드
 2. **직접 URL**: `/viewer/?load={ply_url}` - 수동으로 파일 URL 지정
 3. **드래그 앤 드롭**: 뷰어에 직접 PLY/glTF 파일 드래그
 
@@ -431,10 +443,10 @@ lsof -ti:8000 | xargs kill -9
 **확인**:
 ```bash
 # PLY 파일 확인 (iterations에 따라 경로가 다름)
-ls -lh data/jobs/{job_id}/output/point_cloud/iteration_*/
+ls -lh data/jobs/{product_id}/output/point_cloud/iteration_*/
 
 # 로그 확인
-tail -f data/jobs/{job_id}/logs/process.log
+tail -f data/jobs/{product_id}/logs/process.log
 
 # 디스크 공간 확인
 df -h
@@ -458,13 +470,13 @@ lsof -ti:8000 | xargs kill -9
 **확인**:
 ```bash
 # 1. PLY 파일 존재 확인
-ls -la data/jobs/{job_id}/output/point_cloud/iteration_*/
+ls -la data/jobs/{product_id}/output/point_cloud/iteration_*/
 
 # 2. viewer 디렉토리 확인
 ls -la viewer/
 
 # 3. PLY 파일 직접 접근 테스트
-curl -I http://localhost:8000/recon/pub/{pub_key}/cloud.ply
+curl -I http://localhost:8000/recon/pub/{product_id}/cloud.ply
 
 # 4. 브라우저 콘솔 확인 (F12 → Console/Network 탭)
 ```
@@ -504,30 +516,34 @@ export HOST=0.0.0.0                    # API 서버 호스트
 ```python
 import requests
 
-# 1. 제품 이미지로 3D 재구성 작업 생성
+# 1. 제품 이미지로 3D 재구성 작업 생성 (S3 경로 사용)
+product_id = "550e8400-e29b-41d4-a716-446655440000"
+s3_images = [
+    f"s3://my-bucket/products/{product_id}/image_{i:04d}.jpg"
+    for i in range(1, 18)  # 17장
+]
+
 response = requests.post(
     "http://gaussian-ai-server:8000/recon/jobs",
-    files=[
-        ("files", open(f"product_{product_id}_1.jpg", "rb")),
-        ("files", open(f"product_{product_id}_2.jpg", "rb")),
-        # ... 15-20장
-    ],
-    data={"original_resolution": False}
+    json={
+        "product_id": product_id,
+        "s3_images": s3_images,
+        "iterations": 10000
+    }
 )
 
 job = response.json()
-job_id = job["job_id"]
-pub_key = job["pub_key"]
+# 응답: {"product_id": "550e8400-...", "status": "PENDING", "message": "..."}
 
 # 2. 작업 완료 대기 (polling 또는 webhook)
 status_response = requests.get(
-    f"http://gaussian-ai-server:8000/recon/jobs/{job_id}/status"
+    f"http://gaussian-ai-server:8000/recon/jobs/{product_id}/status"
 )
 
 # 3. 완료 시 PLY URL 저장
 if status_response.json()["status"] == "COMPLETED":
-    ply_url = f"http://gaussian-ai-server:8000/recon/pub/{pub_key}/cloud.ply"
-    viewer_url = f"http://gaussian-ai-server:8000/v/{pub_key}"
+    ply_url = f"http://gaussian-ai-server:8000/recon/pub/{product_id}/cloud.ply"
+    viewer_url = f"http://gaussian-ai-server:8000/v/{product_id}"
 
     # RDS 업데이트
     # UPDATE product SET ply_url=?, viewer_url=?, job_count=job_count+1

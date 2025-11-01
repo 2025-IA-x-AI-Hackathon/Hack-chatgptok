@@ -1,33 +1,47 @@
 # claude
 .claude/
 
-# gaussian_ai - 3D Gaussian Splatting
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+*.log
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Temporary files
+*.tmp
+*.bak
+*.old
+nohup.out
+
+# Environment
+.env
+.env.local
+
+# gaussian_ai - 3D Gaussian Splatting service
 gaussian_ai/gaussian-splatting/
-gaussian_ai/data/
-gaussian_ai/logs/
-gaussian_ai/*.log
-gaussian_ai/server.log
-gaussian_ai/nohup.out
-gaussian_ai/__pycache__/
-gaussian_ai/*.pyc
-gaussian_ai/*.pyo
-gaussian_ai/*.pyd
-gaussian_ai/.Python
-gaussian_ai/*.egg-info/
-gaussian_ai/dist/
-gaussian_ai/build/
-gaussian_ai/.vscode/
-gaussian_ai/.idea/
-gaussian_ai/*.swp
-gaussian_ai/*.swo
-gaussian_ai/*~
-gaussian_ai/.DS_Store
-gaussian_ai/Thumbs.db
-gaussian_ai/*.tmp
-gaussian_ai/*.bak
-gaussian_ai/*.old
-gaussian_ai/*.db
+gaussian_ai/data/jobs/*/
+gaussian_ai/data/*.db
+gaussian_ai/data/*.db.backup
 gaussian_ai/*.ply
 gaussian_ai/*.splat
-gaussian_ai/.env
-gaussian_ai/.env.local
+
+# description_ai - Fault detection service
+description_ai/data/
+description_ai/*.db
+description_ai/*.db.backup
