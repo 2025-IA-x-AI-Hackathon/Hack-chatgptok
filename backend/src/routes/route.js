@@ -30,6 +30,10 @@ router.put('/products/:productId', isAuthenticated, productController.updateProd
 router.delete('/products/:productId', isAuthenticated, productController.deleteProduct);
 router.get('/my-products', isAuthenticated, productController.getMyProducts);
 
+// Product like routes
+router.post('/products/:productId/like', isAuthenticated, productController.likeProduct);
+router.delete('/products/:productId/like', isAuthenticated, productController.unlikeProduct);
+
 // TODO: 추가 기능 라우트
 // - AI 상품 설명 자동 생성
 // - 3DGS 작업 관리
