@@ -1,7 +1,13 @@
 {
   "permissions": {
     "allow": [
-      "Bash(mkdir:*)"
+      "Bash(mkdir:*)",
+      "Bash(mysql:*)",
+      "Bash(curl:*)",
+      "Bash(nc:*)",
+      "Bash(brew install:*)",
+      "Bash(aws:*)",
+      "Bash(/opt/homebrew/opt/mysql@8.4/bin/mysql:*)"
     ],
     "deny": [],
     "ask": []
