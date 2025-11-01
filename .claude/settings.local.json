@@ -1,6 +1,7 @@
 {
   "permissions": {
     "allow": [
+      "Bash(mv:*)"
       "Bash(mkdir:*)",
       "Bash(mysql:*)",
       "Bash(curl:*)",
