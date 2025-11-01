@@ -27,14 +27,14 @@ export function ProfileForm() {
   const queryClient = useQueryClient()
 
   // 프로필 조회 Query
-  const { data: profileData, isLoading: isLoadingProfile } = useQuery({
+  const { data: user, isLoading: isLoadingProfile } = useQuery({
     queryKey: ["profile"],
     queryFn: async () => {
       const response = await userApi.getProfile()
       if (!response.success || !response.data) {
         throw new Error(response.error?.message || "프로필 정보를 불러오는데 실패했습니다")
       }
-      return response.data
+      return response.data.user
     },
   })
 
@@ -48,10 +48,12 @@ export function ProfileForm() {
   } = useForm<UpdateProfileFormData>({
     resolver: zodResolver(updateProfileSchema),
     values: {
-      nickname: profileData?.nickname || "",
-      img: profileData?.img || "",
+      nickname: user?.nickname || "",
+      img: user?.img || "",
     },
   })
+
+  console.log(user)
 
   // 비밀번호 변경 Form
   const {
@@ -164,7 +166,7 @@ export function ProfileForm() {
     updatePasswordMutation.mutate(data)
   }
 
-  const currentProfileImage = imagePreview || profileData?.img || "/placeholder-avatar.jpg"
+  const currentProfileImage = imagePreview || user?.img || "/placeholder-avatar.jpg"
 
   // 날짜 포맷팅 함수
   const formatDate = (dateString?: string) => {
@@ -205,7 +207,7 @@ export function ProfileForm() {
                   <User className="size-5 text-muted-foreground" />
                   <div>
                     <p className="text-sm text-muted-foreground">닉네임</p>
-                    <p className="font-semibold">{profileData?.nickname || "-"}</p>
+                    <p className="font-semibold">{user?.nickname || "-"}</p>
                   </div>
                 </div>
 
@@ -213,7 +215,7 @@ export function ProfileForm() {
                   <Mail className="size-5 text-muted-foreground" />
                   <div>
                     <p className="text-sm text-muted-foreground">이메일</p>
-                    <p className="font-semibold">{profileData?.email || "-"}</p>
+                    <p className="font-semibold">{user?.email || "-"}</p>
                   </div>
                 </div>
 
@@ -221,16 +223,16 @@ export function ProfileForm() {
                   <Calendar className="size-5 text-muted-foreground" />
                   <div>
                     <p className="text-sm text-muted-foreground">가입일</p>
-                    <p className="font-semibold">{formatDate(profileData?.created_at)}</p>
+                    <p className="font-semibold">{formatDate(user?.created_at)}</p>
                   </div>
                 </div>
 
-                {profileData?.updated_at && (
+                {user?.updated_at && (
                   <div className="flex items-center gap-3">
                     <Calendar className="size-5 text-muted-foreground" />
                     <div>
                       <p className="text-sm text-muted-foreground">최근 수정일</p>
-                      <p className="font-semibold">{formatDate(profileData.updated_at)}</p>
+                      <p className="font-semibold">{formatDate(user.updated_at)}</p>
                     </div>
                   </div>
                 )}
@@ -326,7 +328,7 @@ export function ProfileForm() {
               <Input
                 id="email"
                 type="email"
-                value={profileData?.email || ""}
+                value={user?.email || ""}
                 disabled
                 className="bg-muted"
               />

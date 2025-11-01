@@ -360,8 +360,8 @@ export const userApi = {
     /**
      * 프로필 조회
      */
-    getProfile: async (): Promise<ApiResponse<User>> => {
-        return apiRequest<User>("/users/me", { method: "GET" }, true);
+    getProfile: async (): Promise<ApiResponse<{ user: User }>> => {
+        return apiRequest<{ user: User }>("/users/me", { method: "GET" }, true);
     },
 
     /**
