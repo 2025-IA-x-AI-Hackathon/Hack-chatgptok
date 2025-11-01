@@ -34,15 +34,15 @@ const ProductController = {
             }
 
             // 3. AI 상품 설명 자동 생성 큐 등록
-            await JobModel.createDescriptionJobWithConnection(connection, productId);
+            // await JobModel.createDescriptionJobWithConnection(connection, productId);
 
             // 4. 3DGS 작업 큐 등록
-            await JobModel.create3DGSJobWithConnection(connection, productId);
+            // await JobModel.create3DGSJobWithConnection(connection, productId);
 
             // 5. 외부 API 호출 (트랜잭션 내부)
             // 외부 API 호출 실패시 전체 트랜잭션 롤백
-            await JobModel.notifyWorker('description', productId);
-            await JobModel.notifyWorker('3dgs', productId);
+            // await JobModel.notifyWorker('description', productId);
+            // await JobModel.notifyWorker('3dgs', productId);
 
             // 트랜잭션 커밋 (모든 작업 완료)
             await connection.commit();
