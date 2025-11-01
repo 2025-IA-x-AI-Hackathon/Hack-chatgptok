@@ -135,8 +135,15 @@ export default function ProductList() {
 
     return (
         <div className="min-h-screen bg-background pb-20">
-            <div className="max-w-7xl mx-auto px-4 py-6">
-                <h2 className="text-2xl font-bold mb-6">인기 상품</h2>
+            {/* 고정 헤더 */}
+            <div className="sticky top-0 z-10 bg-background border-b">
+                <div className="max-w-7xl mx-auto px-4 py-6">
+                    <h2 className="text-2xl font-bold">인기 상품</h2>
+                </div>
+            </div>
+
+            {/* 상품 목록 */}
+            <div className="max-w-7xl mx-auto">
                 <div className="flex flex-col divide-y divide-border">
                     {products.map((product) => {
                         // 썸네일 이미지 가져오기 (첫 번째 이미지 또는 기본 이미지)
