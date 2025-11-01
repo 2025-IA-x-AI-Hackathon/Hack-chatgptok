@@ -261,11 +261,15 @@ router.post('/auth/refresh', authController.refreshToken);
  *                         nickname:
  *                           type: string
  *                           example: 홍길동
- *                         img:
+ *                         img_url:
  *                           type: string
  *                           nullable: true
- *                           example: https://example.com/profile.jpg
+ *                           description: 프로필 이미지 Presigned URL (1시간 유효)
+ *                           example: https://bucket.s3.region.amazonaws.com/profiles/image.jpg?X-Amz-...
  *                         created_at:
+ *                           type: string
+ *                           format: date-time
+ *                         updated_at:
  *                           type: string
  *                           format: date-time
  *       401:
@@ -514,7 +518,7 @@ router.get('/upload/presigned-url', authenticateToken, uploadController.getPresi
  *                 message:
  *                   type: string
  */
-router.post('/upload/presigned-urls', authenticateToken, uploadController.getMultiplePresignedUrls);
+router.post('/upload/presigned-urls', uploadController.getMultiplePresignedUrls);
 
 /**
  * @swagger

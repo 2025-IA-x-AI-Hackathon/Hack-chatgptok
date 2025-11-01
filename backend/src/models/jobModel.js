@@ -99,14 +99,16 @@ const JobModel = {
             if (!response.ok) {
                 const errorText = await response.text();
                 console.error(`[Job] Description API 호출 실패 - productId: ${productId}, status: ${response.status}, error: ${errorText}`);
-                throw new Error(`Description API failed: ${response.status}`);
+                // 에러를 throw하지 않고 로그만 남김
+                return { success: false, error: errorText };
             }
 
             console.log(`[Job] Description API 호출 성공 - productId: ${productId}`);
             return await response.json();
         } catch (error) {
             console.error(`[Job] Description API 호출 에러 - productId: ${productId}:`, error);
-            throw error;
+            // 에러를 throw하지 않고 로그만 남김
+            return { success: false, error: error.message };
         }
     },
 
@@ -127,8 +129,8 @@ const JobModel = {
                     'accept': 'application/json',
                 },
                 body: JSON.stringify({
-                    files: files,
-                    original_resolution: false,
+                    product_id: productId,
+                    s3_images: files,
                     iterations: 0,
                 }),
             });
@@ -136,14 +138,16 @@ const JobModel = {
             if (!response.ok) {
                 const errorText = await response.text();
                 console.error(`[Job] 3DGS API 호출 실패 - productId: ${productId}, status: ${response.status}, error: ${errorText}`);
-                throw new Error(`3DGS API failed: ${response.status}`);
+                // 에러를 throw하지 않고 로그만 남김
+                return { success: false, error: errorText };
             }
 
             console.log(`[Job] 3DGS API 호출 성공 - productId: ${productId}`);
             return await response.json();
         } catch (error) {
             console.error(`[Job] 3DGS API 호출 에러 - productId: ${productId}:`, error);
-            throw error;
+            // 에러를 throw하지 않고 로그만 남김
+            return { success: false, error: error.message };
         }
     },
 
@@ -168,7 +172,7 @@ const JobModel = {
                     'Authorization': `Bearer ${process.env.WORKER_API_KEY || ''}`,
                 },
                 body: JSON.stringify({
-                    productId,
+                    product_id: productId,
                     jobType,
                     timestamp: new Date().toISOString(),
                 }),
