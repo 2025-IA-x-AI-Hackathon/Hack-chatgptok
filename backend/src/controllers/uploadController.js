@@ -165,7 +165,6 @@ const UploadController = {
                         Bucket: process.env.AWS_BUCKET_NAME,
                         Key: key,
                         ContentType: contentType,
-                        ACL: 'public-read',
                     });
 
                     const uploadUrl = await getSignedUrl(
