@@ -6,7 +6,7 @@ const JWT_REFRESH_EXPIRES_IN = process.env.JWT_REFRESH_EXPIRES_IN || '7d';
 
 /**
  * JWT 액세스 토큰 생성
- * @param {Object} payload - 토큰에 담을 정보 (userId, email 등)
+ * @param {Object} payload - 토큰에 담을 정보 (memberId, email 등)
  * @returns {string} JWT 토큰
  */
 export const generateAccessToken = (payload) => {
@@ -17,7 +17,7 @@ export const generateAccessToken = (payload) => {
 
 /**
  * JWT 리프레시 토큰 생성
- * @param {Object} payload - 토큰에 담을 정보 (userId)
+ * @param {Object} payload - 토큰에 담을 정보 (memberId)
  * @returns {string} JWT 리프레시 토큰
  */
 export const generateRefreshToken = (payload) => {

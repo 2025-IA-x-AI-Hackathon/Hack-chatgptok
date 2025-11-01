@@ -48,11 +48,11 @@ const UserModel = {
     },
 
     // ID로 사용자 조회
-    async findById(userId) {
+    async findById(memberId) {
         try {
             const [rows] = await pool.query(
                 'SELECT member_id, email, nickname, img, created_at, updated_at FROM member WHERE member_id = ?',
-                [userId]
+                [memberId]
             );
             return rows.length > 0 ? rows[0] : null;
         } catch (error) {
@@ -66,7 +66,7 @@ const UserModel = {
     },
 
     // 사용자 정보 업데이트
-    async updateUser(userId, updates) {
+    async updateUser(memberId, updates) {
         try {
             const allowedUpdates = ['nickname', 'img', 'password'];
             const updateFields = [];
@@ -90,7 +90,7 @@ const UserModel = {
 
             updateFields.push('updated_at = ?');
             values.push(new Date());
-            values.push(userId);
+            values.push(memberId);
 
             const [result] = await pool.query(
                 `UPDATE member SET ${updateFields.join(', ')} WHERE member_id = ?`,
@@ -107,11 +107,11 @@ const UserModel = {
     },
 
     // 사용자 삭제
-    async deleteUser(userId) {
+    async deleteUser(memberId) {
         try {
             const [result] = await pool.query(
                 'DELETE FROM member WHERE member_id = ?',
-                [userId]
+                [memberId]
             );
             return result.affectedRows > 0;
         } catch (error) {
