@@ -1,10 +1,10 @@
 "use client";
 
-import { Heart, Share2, MoreVertical, MapPin, Eye, Clock, ChevronLeft, Pencil, Trash2 } from "lucide-react";
+import { Heart, Share2, MoreVertical, Eye, Clock, ChevronLeft, Pencil, Trash2, RefreshCw } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
-import { useParams, useRouter } from "next/navigation";
-import { useState, useEffect, useRef } from "react";
+import { useRouter } from "next/navigation";
+import { useState, useEffect, use } from "react";
 import {
     Carousel,
     CarouselContent,
@@ -19,8 +19,8 @@ import {
     SheetTrigger,
 } from "@/components/ui/sheet";
 import { toast } from "sonner";
-import { productApi, likeApi, chatApi } from "@/lib/api";
-import type { ProductDetail } from "@/lib/types";
+import { useProduct, useDeleteProduct } from "@/lib/hooks/use-products";
+import { Skeleton } from "@/components/ui/skeleton";
 
 // 가격 포맷 함수
 const formatPrice = (price: number) => {
@@ -43,10 +43,83 @@ const formatDate = (dateString: string) => {
     return date.toLocaleDateString("ko-KR");
 };
 
-export default function ProductDetailPage() {
-    const params = useParams();
+// 상품 상세 Skeleton 컴포넌트
+function ProductDetailSkeleton() {
+    return (
+        <div className="min-h-screen pb-20">
+            {/* 헤더 */}
+            <div className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-sm border-b">
+                <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
+                    <Skeleton className="w-10 h-10 rounded-lg" />
+                    <div className="flex items-center gap-2">
+                        <Skeleton className="w-10 h-10 rounded-lg" />
+                        <Skeleton className="w-10 h-10 rounded-lg" />
+                    </div>
+                </div>
+            </div>
+
+            <div className="pt-14 max-w-7xl mx-auto">
+                {/* 이미지 Skeleton */}
+                <Skeleton className="aspect-square w-full" />
+
+                {/* 판매자 정보 Skeleton */}
+                <div className="p-4 border-b">
+                    <div className="flex items-center gap-3">
+                        <Skeleton className="w-12 h-12 rounded-full" />
+                        <div className="space-y-2 flex-1">
+                            <Skeleton className="h-4 w-24" />
+                            <Skeleton className="h-3 w-16" />
+                        </div>
+                    </div>
+                </div>
+
+                {/* 상품 정보 Skeleton */}
+                <div className="p-4 border-b space-y-3">
+                    <Skeleton className="h-6 w-3/4" />
+                    <Skeleton className="h-8 w-32" />
+                    <div className="flex items-center gap-4">
+                        <Skeleton className="h-4 w-16" />
+                        <Skeleton className="h-4 w-12" />
+                        <Skeleton className="h-4 w-12" />
+                    </div>
+                </div>
+
+                {/* 설명 Skeleton */}
+                <div className="p-4 border-b space-y-2">
+                    <Skeleton className="h-4 w-full" />
+                    <Skeleton className="h-4 w-full" />
+                    <Skeleton className="h-4 w-3/4" />
+                    <Skeleton className="h-4 w-full" />
+                    <Skeleton className="h-4 w-2/3" />
+                </div>
+
+                {/* 거래 지역 Skeleton */}
+                <div className="p-4 border-b">
+                    <Skeleton className="h-4 w-48" />
+                </div>
+            </div>
+
+            {/* 하단 고정 버튼 Skeleton */}
+            <div className="fixed bottom-0 left-0 right-0 bg-background border-t">
+                <div className="max-w-7xl mx-auto px-4 py-3 flex items-center gap-3">
+                    <Skeleton className="w-12 h-12 rounded-lg" />
+                    <Skeleton className="flex-1 h-12 rounded-lg" />
+                </div>
+            </div>
+        </div>
+    );
+}
+
+export default function ProductDetailPage({ params } : {
+      params: Promise<{ id: string }>
+} ){
     const router = useRouter();
-    const productId = params.id as string;
+    const { id } = use(params)
+
+
+    const { data: product, isLoading, error, refetch } = useProduct(id);
+
+    const deleteProductMutation = useDeleteProduct();
 
     const [product, setProduct] = useState<ProductDetail | null>(null);
     const [loading, setLoading] = useState(true);
@@ -70,61 +143,94 @@ export default function ProductDetailPage() {
         });
     }, [carouselApi]);
 
-    useEffect(() => {
-        // 같은 productId의 요청이 진행 중이면 새로운 API 호출 하지 않음
-        // React Strict Mode 중복 호출 완벽 방지
-        if (requestRef.current?.productId === productId) {
-            // 두 번째 실행: 첫 번째 요청의 결과를 기다림
-            requestRef.current.promise
-                .then(response => {
-                    if (response.success && response.data) {
-                        setProduct(response.data);
-                    }
-                })
-                .finally(() => {
-                    setLoading(false);
-                });
-            return;
+    const handleDelete = () => {
+        if (confirm("정말 삭제하시겠습니까?")) {
+            deleteProductMutation.mutate(id, {
+                onSuccess: () => {
+                    toast.success("상품이 삭제되었습니다.");
+                    router.push("/");
+                },
+                onError: (error) => {
+                    toast.error(error.message || "상품 삭제에 실패했습니다.");
+                },
+            });
         }
+    };
 
-        let isMounted = true;
+    if (isLoading) {
+        return <ProductDetailSkeleton />;
+    }
 
-        const loadProductData = async () => {
-            try {
-                setLoading(true);
-                setError(null);
+    if (error) {
+        return (
+            <div className="flex flex-col items-center justify-center min-h-screen px-4">
+                <p className="text-red-600 text-center mb-4">
+                    오류가 발생했습니다: {error.message}
+                </p>
+                <div className="flex gap-3">
+                    <button
+                        onClick={() => refetch()}
+                        className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
+                    >
+                        <RefreshCw className="w-4 h-4" />
+                        재시도
+                    </button>
+                    <Link
+                        href="/"
+                        className="px-4 py-2 bg-secondary text-secondary-foreground rounded-lg hover:bg-secondary/90 transition-colors"
+                    >
+                        홈으로 돌아가기
+                    </Link>
+                </div>
+            </div>
+        );
+    }
 
-                // Promise 생성 및 요청 추적
-                const promise = productApi.getProduct(productId);
-                requestRef.current = { productId, promise };
+    const handleDelete = () => {
+        if (confirm("정말 삭제하시겠습니까?")) {
+            deleteProductMutation.mutate(id, {
+                onSuccess: () => {
+                    toast.success("상품이 삭제되었습니다.");
+                    router.push("/");
+                },
+                onError: (error) => {
+                    toast.error(error.message || "상품 삭제에 실패했습니다.");
+                },
+            });
+        }
+    };
 
-                const response = await promise;
+    if (isLoading) {
+        return <ProductDetailSkeleton />;
+    }
 
-                if (isMounted) {
-                    if (response.success && response.data) {
-                        setProduct(response.data);
-                    } else {
-                        setError(response.error?.message || "상품을 불러올 수 없습니다.");
-                        toast.error(response.error?.message || "상품을 불러올 수 없습니다.");
-                    }
-                }
-            } catch (err) {
-                if (isMounted) {
-                    setError("상품을 불러오는 중 오류가 발생했습니다.");
-                    toast.error("상품을 불러오는 중 오류가 발생했습니다.");
-                }
-            } finally {
-                if (isMounted) {
-                    setLoading(false);
-                }
-            }
-        };
+    if (error) {
+        return (
+            <div className="flex flex-col items-center justify-center min-h-screen px-4">
+                <p className="text-red-600 text-center mb-4">
+                    오류가 발생했습니다: {error.message}
+                </p>
+                <div className="flex gap-3">
+                    <button
+                        onClick={() => refetch()}
+                        className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
+                    >
+                        <RefreshCw className="w-4 h-4" />
+                        재시도
+                    </button>
+                    <Link
+                        href="/"
+                        className="px-4 py-2 bg-secondary text-secondary-foreground rounded-lg hover:bg-secondary/90 transition-colors"
+                    >
+                        홈으로 돌아가기
+                    </Link>
+                </div>
+            </div>
+        );
+    }
 
-        loadProductData();
-
-        return () => {
-            isMounted = false;
-        };
+    useEffect(() => {
+        loadProduct();
     }, [productId]);
 
     const loadProduct = async () => {
@@ -198,36 +304,6 @@ export default function ProductDetailPage() {
         }
     };
 
-    const handleStartChat = async () => {
-        try {
-            setIsChatLoading(true);
-
-            // 로그인 확인
-            const token = sessionStorage.getItem('accessToken');
-            if (!token) {
-                toast.error("로그인이 필요합니다.");
-                router.push("/login");
-                return;
-            }
-
-            // 채팅방 생성 또는 조회
-            const response = await chatApi.createOrGetChatRoom({ productId });
-
-            if (response.success && response.data?.data) {
-                const chatRoom = response.data.data;
-                // 채팅방으로 이동
-                router.push(`/chat/${chatRoom.room_id}`);
-            } else {
-                toast.error(response.error?.message || "채팅방 생성에 실패했습니다.");
-            }
-        } catch (err) {
-            console.error("채팅 시작 오류:", err);
-            toast.error("채팅을 시작할 수 없습니다.");
-        } finally {
-            setIsChatLoading(false);
-        }
-    };
-
     if (loading) {
         return (
             <div className="min-h-screen">
@@ -250,10 +326,8 @@ export default function ProductDetailPage() {
 
     if (error || !product) {
         return (
-            <div className="flex flex-col items-center justify-center min-h-screen">
-                <p className="text-lg text-muted-foreground mb-4">
-                    {error || "상품을 찾을 수 없습니다."}
-                </p>
+            <div className="flex flex-col items-center justify-center min-h-screen px-4">
+                <p className="text-lg text-muted-foreground mb-4">상품을 찾을 수 없습니다.</p>
                 <Link
                     href="/"
                     className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
@@ -298,7 +372,7 @@ export default function ProductDetailPage() {
                                     <button
                                         onClick={() => {
                                             setIsMenuOpen(false);
-                                            router.push(`/products/${productId}/edit`);
+                                            router.push(`/products/${id}/edit`);
                                         }}
                                         className="flex items-center gap-3 px-4 py-3 text-left hover:bg-accent rounded-lg transition-colors"
                                     >
@@ -308,15 +382,15 @@ export default function ProductDetailPage() {
                                     <button
                                         onClick={() => {
                                             setIsMenuOpen(false);
-                                            if (confirm("정말 삭제하시겠습니까?")) {
-                                                toast.info("삭제 기능은 백엔드 연동 후 구현됩니다.");
-                                                router.push("/");
-                                            }
+                                            handleDelete();
                                         }}
-                                        className="flex items-center gap-3 px-4 py-3 text-left text-destructive hover:bg-destructive/10 rounded-lg transition-colors"
+                                        disabled={deleteProductMutation.isPending}
+                                        className="flex items-center gap-3 px-4 py-3 text-left text-destructive hover:bg-destructive/10 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                                     >
                                         <Trash2 className="w-5 h-5" />
-                                        <span className="text-base">삭제</span>
+                                        <span className="text-base">
+                                            {deleteProductMutation.isPending ? "삭제 중..." : "삭제"}
+                                        </span>
                                     </button>
                                 </div>
                             </SheetContent>
@@ -335,6 +409,7 @@ export default function ProductDetailPage() {
                                     <div className="relative aspect-square bg-muted">
                                         <Image
                                             src={image}
+                                            alt={`${product.name} - 이미지 ${index + 1}`}
                                             alt={`${product.name} - 이미지 ${index + 1}`}
                                             fill
                                             className="object-cover"
@@ -370,18 +445,15 @@ export default function ProductDetailPage() {
                     <div className="flex items-center gap-3">
                         <div className="relative w-12 h-12 rounded-full overflow-hidden bg-muted">
                             <Image
-                                src={product.seller.profileImage}
-                                alt={product.seller.name}
+                                src={product.seller_img}
+                                alt={product.seller_nickname}
                                 fill
                                 className="object-cover"
                                 unoptimized
                             />
                         </div>
                         <div>
-                            <p className="font-medium">{product.seller.name}</p>
-                            <p className="text-sm text-muted-foreground">
-                                {product.seller.location}
-                            </p>
+                            <p className="font-medium">{product.seller_nickname}</p>
                         </div>
                     </div>
                 )}
@@ -389,18 +461,21 @@ export default function ProductDetailPage() {
                 {/* 상품 정보 */}
                 <div className="p-4 border-b">
                     <h1 className="text-xl font-bold mb-2">{product.name}</h1>
+                    <h1 className="text-xl font-bold mb-2">{product.name}</h1>
                     <p className="text-2xl font-bold mb-4">{formatPrice(product.price)}</p>
                     <div className="flex items-center gap-4 text-sm text-muted-foreground">
                         <div className="flex items-center gap-1">
                             <Clock className="w-4 h-4" />
-                            <span>{formatDate(product.created_at)}</span>
+                            <span>{product.created_at}</span>
                         </div>
                         <div className="flex items-center gap-1">
                             <Eye className="w-4 h-4" />
                             <span>{product.view_cnt}</span>
+                            <span>{product.view_cnt}</span>
                         </div>
                         <div className="flex items-center gap-1">
                             <Heart className="w-4 h-4" />
+                            <span>{product.likes_cnt}</span>
                             <span>{product.likes_cnt}</span>
                         </div>
                     </div>
@@ -428,34 +503,6 @@ export default function ProductDetailPage() {
                         {product.description || "설명이 없습니다."}
                     </p>
                 </div>
-
-                {/* AI 결함 분석 결과 */}
-                {product.fault_description && product.fault_description.status === 'DONE' && product.fault_description.markdown && (
-                    <div className="p-4 border-b">
-                        <h2 className="font-bold mb-2">AI 결함 분석</h2>
-                        <div className="prose prose-sm max-w-none">
-                            {/* TODO: 마크다운 렌더링 라이브러리 사용 */}
-                            <pre className="whitespace-pre-wrap text-sm bg-muted p-3 rounded">
-                                {product.fault_description.markdown}
-                            </pre>
-                        </div>
-                    </div>
-                )}
-
-                {/* 3D 모델 보기 */}
-                {product.ply_url && (
-                    <div className="p-4 border-b">
-                        <h2 className="font-bold mb-2">3D 모델</h2>
-                        <a
-                            href={product.ply_url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-primary hover:underline text-sm"
-                        >
-                            3D 모델 파일 다운로드
-                        </a>
-                    </div>
-                )}
             </div>
 
             {/* 하단 고정 버튼 */}

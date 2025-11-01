@@ -1,137 +1,39 @@
 "use client";
 
-import { Heart, Plus } from "lucide-react";
+import { Heart, Plus, RefreshCw } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
-import { useEffect, useState } from "react";
-import { productApi } from "@/lib/api";
-import type { Product } from "@/lib/types";
-import { toast } from "sonner";
+import { useProducts } from "@/lib/hooks/use-products";
+import { Skeleton } from "@/components/ui/skeleton";
 
 // 가격 포맷 함수
 const formatPrice = (price: number) => {
     return new Intl.NumberFormat("ko-KR").format(price) + "원";
 };
 
-// 날짜 포맷 함수
-const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    const now = new Date();
-    const diffMs = now.getTime() - date.getTime();
-    const diffMins = Math.floor(diffMs / 60000);
-    const diffHours = Math.floor(diffMs / 3600000);
-    const diffDays = Math.floor(diffMs / 86400000);
-
-    if (diffMins < 1) return "방금 전";
-    if (diffMins < 60) return `${diffMins}분 전`;
-    if (diffHours < 24) return `${diffHours}시간 전`;
-    if (diffDays < 7) return `${diffDays}일 전`;
-    return date.toLocaleDateString("ko-KR");
-};
+// 상품 아이템 Skeleton 컴포넌트
+function ProductItemSkeleton() {
+    return (
+        <div className="flex gap-4 p-4">
+            <Skeleton className="w-24 h-24 shrink-0 rounded-lg" />
+            <div className="flex flex-col justify-between flex-1 min-w-0">
+                <div className="space-y-2">
+                    <Skeleton className="h-4 w-3/4" />
+                    <Skeleton className="h-4 w-1/2" />
+                </div>
+                <div className="flex items-end justify-between">
+                    <Skeleton className="h-6 w-24" />
+                    <Skeleton className="h-4 w-12" />
+                </div>
+            </div>
+        </div>
+    );
+}
 
 export default function ProductList() {
-    const [products, setProducts] = useState<Product[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
+    const { data, isLoading, error, refetch } = useProducts({ page: 1, limit: 20, status: "ACTIVE" });
 
-    useEffect(() => {
-        loadProducts();
-    }, []);
-
-    const loadProducts = async () => {
-        try {
-            setLoading(true);
-            setError(null);
-
-            const response = await productApi.getProducts({
-                page: 1,
-                limit: 20,
-                status: 'ACTIVE', // 판매 중인 상품만 조회
-                sort: 'latest',
-            });
-
-            if (response.success && response.data) {
-                setProducts(response.data.products);
-            } else {
-                setError(response.error?.message || "상품 목록을 불러올 수 없습니다.");
-                toast.error(response.error?.message || "상품 목록을 불러올 수 없습니다.");
-            }
-        } catch (err) {
-            setError("상품 목록을 불러오는 중 오류가 발생했습니다.");
-            toast.error("상품 목록을 불러오는 중 오류가 발생했습니다.");
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    if (loading) {
-        return (
-            <div className="min-h-screen bg-background pb-20">
-                <div className="max-w-7xl mx-auto px-4 py-6">
-                    <h2 className="text-2xl font-bold mb-6">인기 상품</h2>
-                    <div className="flex flex-col divide-y divide-border">
-                        {[...Array(5)].map((_, i) => (
-                            <div key={i} className="flex gap-4 p-4 animate-pulse">
-                                <div className="w-24 h-24 bg-muted rounded-lg" />
-                                <div className="flex-1 space-y-2">
-                                    <div className="h-5 bg-muted rounded w-3/4" />
-                                    <div className="h-4 bg-muted rounded w-1/4" />
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            </div>
-        );
-    }
-
-    if (error) {
-        return (
-            <div className="min-h-screen bg-background pb-20">
-                <div className="max-w-7xl mx-auto px-4 py-6">
-                    <h2 className="text-2xl font-bold mb-6">인기 상품</h2>
-                    <div className="text-center py-20">
-                        <p className="text-muted-foreground mb-4">{error}</p>
-                        <button
-                            onClick={loadProducts}
-                            className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
-                        >
-                            다시 시도
-                        </button>
-                    </div>
-                </div>
-            </div>
-        );
-    }
-
-    if (products.length === 0) {
-        return (
-            <div className="min-h-screen bg-background pb-20">
-                <div className="max-w-7xl mx-auto px-4 py-6">
-                    <h2 className="text-2xl font-bold mb-6">인기 상품</h2>
-                    <div className="text-center py-20">
-                        <p className="text-muted-foreground mb-4">
-                            등록된 상품이 없습니다.
-                        </p>
-                        <Link
-                            href="/products/new"
-                            className="inline-block px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
-                        >
-                            첫 상품 등록하기
-                        </Link>
-                    </div>
-                </div>
-
-                {/* 상품 등록 플로팅 버튼 */}
-                <Link
-                    href="/products/new"
-                    className="fixed bottom-20 right-4 w-14 h-14 bg-primary text-primary-foreground rounded-full flex items-center justify-center shadow-lg hover:bg-primary/90 transition-colors z-40"
-                >
-                    <Plus className="w-6 h-6" />
-                </Link>
-            </div>
-        );
-    }
+    console.log(data)
 
     return (
         <div className="fixed inset-0 flex flex-col bg-background pb-16">
@@ -142,86 +44,84 @@ export default function ProductList() {
                 </div>
             </div>
 
+
             {/* 상품 목록 (스크롤 가능) */}
             <div className="flex-1 overflow-y-auto">
                 <div className="max-w-7xl mx-auto">
-                    <div className="flex flex-col divide-y divide-border">
-                    {products.map((product) => (
-                        <Link
-                            key={product.id}
-                            href={`/products/${product.id}`}
-                            className="group"
-                        >
-                            <div className="flex gap-4 p-4 hover:bg-accent transition-colors">
-                                {/* 상품 썸네일 */}
-                                <div className="relative w-24 h-24 shrink-0 overflow-hidden rounded-lg bg-muted">
-                                    <Image
-                                        src={product.thumbnail}
-                                        alt={product.title}
-                                        fill
-                                        className="object-cover transition-transform group-hover:scale-105"
-                                        sizes="96px"
-                                        unoptimized
-                                    />
-                                </div>
+                    {isLoading && (
+                        <div className="flex flex-col divide-y divide-border">
+                            {Array.from({ length: 8 }).map((_, index) => (
+                                <ProductItemSkeleton key={index} />
+                            ))}
+                        </div>
+                    )}
 
-                        return (
-                            <Link
-                                key={product.product_id}
-                                href={`/products/${product.product_id}`}
-                                className="group"
+                    {error && (
+                        <div className="flex flex-col items-center justify-center py-20 px-4">
+                            <p className="text-red-600 text-center mb-4">
+                                오류가 발생했습니다: {error.message}
+                            </p>
+                            <button
+                                onClick={() => refetch()}
+                                className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
                             >
-                                <div className="flex gap-4 p-4 hover:bg-accent transition-colors">
-                                    {/* 상품 썸네일 */}
-                                    <div className="relative w-24 h-24 shrink-0 overflow-hidden rounded-lg bg-muted">
-                                        <Image
-                                            src={thumbnail}
-                                            alt={product.name}
-                                            fill
-                                            className="object-cover transition-transform group-hover:scale-105"
-                                            sizes="96px"
-                                            unoptimized
-                                        />
-                                    </div>
+                                <RefreshCw className="w-4 h-4" />
+                                재시도
+                            </button>
+                        </div>
+                    )}
 
-                                    {/* 상품 정보 */}
-                                    <div className="flex flex-col justify-between flex-1 min-w-0">
-                                        <div>
-                                            <h3 className="text-base font-medium line-clamp-2 group-hover:text-primary transition-colors">
-                                                {product.name}
-                                            </h3>
-                                            {product.seller && (
-                                                <p className="text-sm text-muted-foreground mt-1">
-                                                    {product.seller.nickname}
-                                                </p>
-                                            )}
+                    {!isLoading && !error && data && data.products.length === 0 && (
+                        <div className="flex items-center justify-center py-20">
+                            <p className="text-muted-foreground">등록된 상품이 없습니다.</p>
+                        </div>
+                    )}
+                    
+
+                    {!isLoading && !error && data && data.products.length > 0 && (
+                        <div className="flex flex-col divide-y divide-border">
+                            {data.products.map((product) => (
+                                <Link
+                                    key={product.product_id}
+                                    href={`/products/${product.product_id}`}
+                                    className="group"
+                                >
+                                    <div className="flex gap-4 p-4 hover:bg-accent transition-colors">
+                                        {/* 상품 썸네일 */}
+                                        <div className="relative w-24 h-24 shrink-0 overflow-hidden rounded-lg bg-muted">
+                                            <Image
+                                                src="https://placehold.co/800x800"
+                                                alt={product.name}
+                                                fill
+                                                className="object-cover transition-transform group-hover:scale-105"
+                                                sizes="96px"
+                                                unoptimized
+                                            />
                                         </div>
-                                        <div className="flex items-end justify-between">
+
+                                        {/* 상품 정보 */}
+                                        <div className="flex flex-col justify-between flex-1 min-w-0">
                                             <div>
+                                                <h3 className="text-base font-medium line-clamp-2 group-hover:text-primary transition-colors">
+                                                    {product.name}
+                                                </h3>
+                                            </div>
+                                            <div className="flex items-end justify-between">
                                                 <p className="text-lg font-bold">
                                                     {formatPrice(product.price)}
                                                 </p>
-                                                <p className="text-xs text-muted-foreground">
-                                                    {formatDate(product.created_at)}
-                                                </p>
-                                            </div>
-                                            {/* 좋아요 & 조회수 */}
-                                            <div className="flex items-center gap-3 text-muted-foreground text-sm">
-                                                <div className="flex items-center gap-1">
+                                                {/* 좋아요 */}
+                                                <div className="flex items-center gap-1 text-muted-foreground text-sm">
                                                     <Heart className="w-4 h-4" />
                                                     <span>{product.likes_cnt}</span>
                                                 </div>
-                                                <span className="text-xs">
-                                                    조회 {product.view_cnt}
-                                                </span>
                                             </div>
                                         </div>
                                     </div>
-                                </div>
-                            </div>
-                        </Link>
-                    ))}
-                    </div>
+                                </Link>
+                            ))}
+                        </div>
+                    )}
                 </div>
             </div>
 

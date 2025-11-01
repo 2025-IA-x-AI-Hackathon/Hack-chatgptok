@@ -1,10 +1,18 @@
 "use client";
 
-import { ChevronLeft, ImagePlus, X } from "lucide-react";
+import { ChevronLeft, ImagePlus, X, RefreshCw } from "lucide-react";
 import Image from "next/image";
+import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
+import { productFormSchema, type ProductFormData } from "@/lib/schemas/product";
+import { useProduct, useUpdateProduct } from "@/lib/hooks/use-products";
+import { Skeleton } from "@/components/ui/skeleton";
+import { uploadApi } from "@/lib/api";
+import { UploadProgressModal } from "@/components/upload-progress-modal";
 
 interface Product {
     id: number;
@@ -264,27 +272,125 @@ M1 칩 탑재 모델이고, 케이스와 필름 부착되어 있습니다.
     },
 };
 
+// 상품 수정 Skeleton 컴포넌트
+function EditProductSkeleton() {
+    return (
+        <div className="min-h-screen bg-background pb-20">
+            {/* 헤더 */}
+            <div className="fixed top-0 left-0 right-0 z-50 bg-background border-b">
+                <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
+                    <Skeleton className="w-10 h-10 rounded-lg" />
+                    <Skeleton className="h-5 w-20" />
+                    <div className="w-10"></div>
+                </div>
+            </div>
+
+            <div className="pt-14 max-w-7xl mx-auto">
+                {/* 이미지 Skeleton */}
+                <div className="p-4 border-b space-y-3">
+                    <Skeleton className="h-4 w-32" />
+                    <div className="flex gap-3">
+                        <Skeleton className="w-24 h-24 rounded-lg" />
+                        <Skeleton className="w-24 h-24 rounded-lg" />
+                        <Skeleton className="w-24 h-24 rounded-lg" />
+                    </div>
+                </div>
+
+                {/* 제목 Skeleton */}
+                <div className="p-4 border-b space-y-2">
+                    <Skeleton className="h-4 w-12" />
+                    <Skeleton className="h-10 w-full rounded-lg" />
+                </div>
+
+                {/* 가격 Skeleton */}
+                <div className="p-4 border-b space-y-2">
+                    <Skeleton className="h-4 w-12" />
+                    <Skeleton className="h-10 w-full rounded-lg" />
+                </div>
+
+                {/* 설명 Skeleton */}
+                <div className="p-4 border-b space-y-2">
+                    <Skeleton className="h-4 w-12" />
+                    <Skeleton className="h-48 w-full rounded-lg" />
+                </div>
+
+                {/* 거래 지역 Skeleton */}
+                <div className="p-4 border-b space-y-2">
+                    <Skeleton className="h-4 w-20" />
+                    <Skeleton className="h-10 w-full rounded-lg" />
+                </div>
+            </div>
+
+            {/* 버튼 Skeleton */}
+            <div className="fixed bottom-0 left-0 right-0 bg-background border-t">
+                <div className="max-w-7xl mx-auto px-4 py-3">
+                    <Skeleton className="w-full h-12 rounded-lg" />
+                </div>
+            </div>
+        </div>
+    );
+}
+
+interface ImagePreview {
+    file?: File;
+    preview: string;
+    isExisting: boolean;
+}
+
 export default function EditProductPage() {
     const params = useParams();
     const router = useRouter();
     const productId = Number(params.id);
-    const product = productsDetail[productId];
 
-    const [title, setTitle] = useState("");
-    const [price, setPrice] = useState("");
-    const [description, setDescription] = useState("");
-    const [location, setLocation] = useState("");
-    const [images, setImages] = useState<string[]>([]);
+    const { data: product, isLoading, error, refetch } = useProduct(productId);
+    const updateProductMutation = useUpdateProduct(productId);
+    const [imageFiles, setImageFiles] = useState<ImagePreview[]>([]);
+    const fileInputRef = useRef<HTMLInputElement>(null);
+
+    // 업로드 프로그레스 상태
+    const [uploadProgress, setUploadProgress] = useState({
+        isOpen: false,
+        currentFile: 0,
+        totalFiles: 0,
+        fileProgress: 0,
+        status: "uploading" as "uploading" | "processing" | "success",
+    });
+
+    const {
+        register,
+        handleSubmit,
+        setValue,
+        watch,
+        reset,
+        formState: { errors },
+    } = useForm<ProductFormData>({
+        resolver: zodResolver(productFormSchema),
+        defaultValues: {
+            name: "",
+            price: "",
+            description: "",
+            imageUrls: [],
+        },
+    });
+
+    const priceValue = watch("price");
 
     useEffect(() => {
         if (product) {
-            setTitle(product.title);
-            setPrice(product.price.toLocaleString('ko-KR'));
-            setDescription(product.description);
-            setLocation(product.location);
-            setImages(product.images);
+            reset({
+                name: product.title,
+                price: product.price.toLocaleString('ko-KR'),
+                description: product.description,
+                imageUrls: product.images,
+            });
+            // 기존 이미지를 imageFiles 상태로 설정
+            const existingImages: ImagePreview[] = product.images.map((url) => ({
+                preview: url,
+                isExisting: true,
+            }));
+            setImageFiles(existingImages);
         }
-    }, [product]);
+    }, [product, reset]);
 
     // 가격 입력 핸들러 - 숫자만 입력받고 천 단위 콤마 추가
     const handlePriceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -294,53 +400,186 @@ export default function EditProductPage() {
         // 천 단위 콤마 추가
         if (numbers) {
             const formatted = Number(numbers).toLocaleString('ko-KR');
-            setPrice(formatted);
+            setValue("price", formatted, { shouldValidate: true });
         } else {
-            setPrice('');
+            setValue("price", "", { shouldValidate: true });
         }
     };
 
     const handleImageAdd = () => {
-        if (images.length >= 10) return;
-        // 실제로는 파일 업로드를 처리해야 하지만, 데모용으로 placeholder 이미지 추가
-        const colors = ["e2e8f0/64748b", "dbeafe/3b82f6", "f3e8ff/a855f7", "fef3c7/f59e0b"];
-        const randomColor = colors[Math.floor(Math.random() * colors.length)];
-        const newImage = `https://placehold.co/800x800/${randomColor}?text=Product+${images.length + 1}`;
-        setImages([...images, newImage]);
+        if (imageFiles.length >= 10) {
+            toast.error("최대 10개까지 이미지를 추가할 수 있습니다.");
+            return;
+        }
+        fileInputRef.current?.click();
+    };
+
+    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const files = Array.from(e.target.files || []);
+
+        if (imageFiles.length + files.length > 10) {
+            toast.error("최대 10개까지 이미지를 추가할 수 있습니다.");
+            return;
+        }
+
+        const newImageFiles: ImagePreview[] = files.map((file) => ({
+            file,
+            preview: URL.createObjectURL(file),
+            isExisting: false,
+        }));
+
+        const updatedFiles = [...imageFiles, ...newImageFiles];
+        setImageFiles(updatedFiles);
+
+        // 폼 검증을 위해 URL 설정
+        const imageUrls = updatedFiles.map((img) => img.preview);
+        setValue("imageUrls", imageUrls, { shouldValidate: true });
+
+        // input 초기화
+        if (fileInputRef.current) {
+            fileInputRef.current.value = "";
+        }
     };
 
     const handleImageRemove = (index: number) => {
-        setImages(images.filter((_, i) => i !== index));
-    };
+        const imageToRemove = imageFiles[index];
+        const newImageFiles = imageFiles.filter((_, i) => i !== index);
 
-    const handleSubmit = (e: React.FormEvent) => {
-        e.preventDefault();
-
-        if (!title || !price || !description || !location) {
-            toast.error("모든 필드를 입력해주세요.");
-            return;
+        // 새로 추가된 이미지만 메모리 해제
+        if (!imageToRemove.isExisting) {
+            URL.revokeObjectURL(imageToRemove.preview);
         }
 
-        if (images.length === 0) {
-            toast.error("최소 1개의 이미지를 추가해주세요.");
-            return;
-        }
-
-        // 여기서 실제로는 서버에 데이터를 전송해야 합니다
-        toast.success("상품이 수정되었습니다!");
-        router.push(`/products/${productId}`);
+        setImageFiles(newImageFiles);
+        const imageUrls = newImageFiles.map((img) => img.preview);
+        setValue("imageUrls", imageUrls, { shouldValidate: true });
     };
+
+    const onSubmit = async (data: ProductFormData) => {
+        try {
+            // 새로 추가된 이미지만 필터링
+            const newFiles = imageFiles
+                .filter((img) => !img.isExisting && img.file)
+                .map((img) => img.file!);
+
+            let uploadedUrls: string[] = [];
+
+            // 새로 추가된 이미지가 있으면 업로드
+            if (newFiles.length > 0) {
+                setUploadProgress({
+                    isOpen: true,
+                    currentFile: 0,
+                    totalFiles: newFiles.length,
+                    fileProgress: 0,
+                    status: "uploading",
+                });
+
+                const uploadResult = await uploadApi.uploadImages(
+                    newFiles,
+                    (current, total, fileProgress) => {
+                        setUploadProgress((prev) => ({
+                            ...prev,
+                            currentFile: current,
+                            totalFiles: total,
+                            fileProgress: fileProgress,
+                        }));
+                    }
+                );
+
+                if (!uploadResult.success || !uploadResult.data) {
+                    throw new Error(uploadResult.error?.message || "이미지 업로드에 실패했습니다.");
+                }
+
+                uploadedUrls = uploadResult.data;
+
+                setUploadProgress((prev) => ({
+                    ...prev,
+                    status: "processing",
+                }));
+            }
+
+            // 기존 이미지 URL + 새로 업로드된 이미지 URL
+            const existingUrls = imageFiles
+                .filter((img) => img.isExisting)
+                .map((img) => img.preview);
+
+            const allImageUrls = [...existingUrls, ...uploadedUrls];
+
+            const productData = {
+                name: data.name,
+                price: Number(data.price.replace(/[^0-9]/g, "")),
+                description: data.description,
+                ply_url: allImageUrls[0], // 첫 번째 이미지를 ply_url로 사용 (임시)
+                thumbnail: allImageUrls[0], // 첫 번째 이미지를 썸네일로 사용
+            };
+
+            updateProductMutation.mutate(productData, {
+                onSuccess: () => {
+                    if (newFiles.length > 0) {
+                        setUploadProgress((prev) => ({
+                            ...prev,
+                            status: "success",
+                        }));
+
+                        setTimeout(() => {
+                            toast.success("상품이 수정되었습니다!");
+                            router.push(`/products/${productId}`);
+                        }, 1000);
+                    } else {
+                        toast.success("상품이 수정되었습니다!");
+                        router.push(`/products/${productId}`);
+                    }
+                },
+                onError: (error) => {
+                    setUploadProgress({ isOpen: false, currentFile: 0, totalFiles: 0, fileProgress: 0, status: "uploading" });
+                    toast.error(error.message || "상품 수정에 실패했습니다.");
+                },
+            });
+        } catch (error) {
+            setUploadProgress({ isOpen: false, currentFile: 0, totalFiles: 0, fileProgress: 0, status: "uploading" });
+            toast.error(error instanceof Error ? error.message : "상품 수정에 실패했습니다.");
+        }
+    };
+
+    if (isLoading) {
+        return <EditProductSkeleton />;
+    }
+
+    if (error) {
+        return (
+            <div className="flex flex-col items-center justify-center min-h-screen px-4">
+                <p className="text-red-600 text-center mb-4">
+                    오류가 발생했습니다: {error.message}
+                </p>
+                <div className="flex gap-3">
+                    <button
+                        onClick={() => refetch()}
+                        className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
+                    >
+                        <RefreshCw className="w-4 h-4" />
+                        재시도
+                    </button>
+                    <Link
+                        href="/"
+                        className="px-4 py-2 bg-secondary text-secondary-foreground rounded-lg hover:bg-secondary/90 transition-colors"
+                    >
+                        홈으로 돌아가기
+                    </Link>
+                </div>
+            </div>
+        );
+    }
 
     if (!product) {
         return (
-            <div className="flex flex-col items-center justify-center min-h-screen">
-                <p className="text-lg text-muted-foreground">상품을 찾을 수 없습니다.</p>
-                <button
-                    onClick={() => router.push("/")}
-                    className="mt-4 px-4 py-2 bg-primary text-primary-foreground rounded-lg"
+            <div className="flex flex-col items-center justify-center min-h-screen px-4">
+                <p className="text-lg text-muted-foreground mb-4">상품을 찾을 수 없습니다.</p>
+                <Link
+                    href="/"
+                    className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
                 >
                     홈으로 돌아가기
-                </button>
+                </Link>
             </div>
         );
     }
@@ -361,15 +600,37 @@ export default function EditProductPage() {
                 </div>
             </div>
 
-            <form onSubmit={handleSubmit} className="pt-14 max-w-7xl mx-auto">
+            {/* 업로드 프로그레스 모달 */}
+            <UploadProgressModal
+                isOpen={uploadProgress.isOpen}
+                currentFile={uploadProgress.currentFile}
+                totalFiles={uploadProgress.totalFiles}
+                fileProgress={uploadProgress.fileProgress}
+                status={uploadProgress.status}
+            />
+
+            {/* 숨겨진 파일 입력 */}
+            <input
+                type="file"
+                ref={fileInputRef}
+                accept="image/*"
+                multiple
+                onChange={handleFileChange}
+                className="hidden"
+            />
+
+            <form onSubmit={handleSubmit(onSubmit)} className="pt-14 max-w-7xl mx-auto">
                 {/* 이미지 업로드 */}
                 <div className="p-4 border-b">
                     <label className="block text-sm font-medium mb-3">
-                        상품 이미지 ({images.length}/10)
+                        상품 이미지 ({imageFiles.length}/10)
                     </label>
+                    {errors.imageUrls && (
+                        <p className="text-xs text-red-600 mb-2">{errors.imageUrls.message}</p>
+                    )}
                     <div className="flex gap-3 overflow-x-auto pb-2">
                         {/* 이미지 추가 버튼 */}
-                        {images.length < 10 && (
+                        {imageFiles.length < 10 && (
                             <button
                                 type="button"
                                 onClick={handleImageAdd}
@@ -383,13 +644,13 @@ export default function EditProductPage() {
                         )}
 
                         {/* 이미지 미리보기 */}
-                        {images.map((image, index) => (
+                        {imageFiles.map((imageFile, index) => (
                             <div
                                 key={index}
                                 className="relative w-24 h-24 shrink-0 rounded-lg overflow-hidden bg-muted group"
                             >
                                 <Image
-                                    src={image}
+                                    src={imageFile.preview}
                                     alt={`상품 이미지 ${index + 1}`}
                                     fill
                                     className="object-cover"
@@ -415,20 +676,24 @@ export default function EditProductPage() {
                     </p>
                 </div>
 
-                {/* 제목 */}
+                {/* 상품명 */}
                 <div className="p-4 border-b">
-                    <label className="block text-sm font-medium mb-2">제목</label>
+                    <label className="block text-sm font-medium mb-2">상품명</label>
                     <input
                         type="text"
-                        value={title}
-                        onChange={(e) => setTitle(e.target.value)}
-                        placeholder="상품 제목을 입력하세요"
+                        {...register("name")}
+                        placeholder="상품명을 입력하세요"
                         className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
                         maxLength={100}
                     />
-                    <p className="text-xs text-muted-foreground mt-1 text-right">
-                        {title.length}/100
-                    </p>
+                    <div className="flex items-center justify-between mt-1">
+                        {errors.name && (
+                            <p className="text-xs text-red-600">{errors.name.message}</p>
+                        )}
+                        <p className="text-xs text-muted-foreground ml-auto">
+                            {watch("name")?.length || 0}/100
+                        </p>
+                    </div>
                 </div>
 
                 {/* 가격 */}
@@ -437,40 +702,35 @@ export default function EditProductPage() {
                     <div className="flex items-center gap-2">
                         <input
                             type="text"
-                            value={price}
+                            value={priceValue}
                             onChange={handlePriceChange}
                             placeholder="0"
                             className="flex-1 px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
                         />
                         <span className="text-sm font-medium">원</span>
                     </div>
+                    {errors.price && (
+                        <p className="text-xs text-red-600 mt-1">{errors.price.message}</p>
+                    )}
                 </div>
 
                 {/* 설명 */}
                 <div className="p-4 border-b">
                     <label className="block text-sm font-medium mb-2">설명</label>
                     <textarea
-                        value={description}
-                        onChange={(e) => setDescription(e.target.value)}
+                        {...register("description")}
                         placeholder="상품 설명을 입력하세요"
                         className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary min-h-[200px] resize-none"
                         maxLength={2000}
                     />
-                    <p className="text-xs text-muted-foreground mt-1 text-right">
-                        {description.length}/2000
-                    </p>
-                </div>
-
-                {/* 거래 지역 */}
-                <div className="p-4 border-b">
-                    <label className="block text-sm font-medium mb-2">거래 지역</label>
-                    <input
-                        type="text"
-                        value={location}
-                        onChange={(e) => setLocation(e.target.value)}
-                        placeholder="예: 서울 강남구 역삼동"
-                        className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-                    />
+                    <div className="flex items-center justify-between mt-1">
+                        {errors.description && (
+                            <p className="text-xs text-red-600">{errors.description.message}</p>
+                        )}
+                        <p className="text-xs text-muted-foreground ml-auto">
+                            {watch("description")?.length || 0}/2000
+                        </p>
+                    </div>
                 </div>
 
                 {/* 수정 버튼 */}
@@ -478,9 +738,10 @@ export default function EditProductPage() {
                     <div className="max-w-7xl mx-auto px-4 py-3">
                         <button
                             type="submit"
-                            className="w-full bg-primary text-primary-foreground py-3 rounded-lg font-medium hover:bg-primary/90 transition-colors"
+                            disabled={updateProductMutation.isPending}
+                            className="w-full bg-primary text-primary-foreground py-3 rounded-lg font-medium hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                         >
-                            수정하기
+                            {updateProductMutation.isPending ? "수정 중..." : "수정하기"}
                         </button>
                     </div>
                 </div>

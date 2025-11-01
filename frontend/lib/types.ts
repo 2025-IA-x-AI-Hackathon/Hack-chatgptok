@@ -1,6 +1,20 @@
 // API 타입 정의
 
 // ============ 공통 타입 ============
+
+/**
+ * 서버 Envelope 응답 구조
+ * 서버에서 반환하는 모든 응답은 이 구조로 감싸져 있음
+ */
+export interface ServerEnvelope<T> {
+    success: boolean;
+    message?: string;
+    data: T;
+}
+
+/**
+ * 클라이언트에서 사용하는 API 응답 타입
+ */
 export interface ApiResponse<T> {
     success: boolean;
     data?: T;
@@ -17,52 +31,35 @@ export interface ApiError {
 }
 
 export interface Pagination {
-    currentPage: number;
+    page: number;
+    limit: number;
+    total: number;
     totalPages: number;
-    totalItems: number;
-    itemsPerPage: number;
 }
 
 // ============ 상품 타입 ============
-export interface ProductImage {
-    image_id: number;
-    s3_url: string;
-    sort_order: number;
-}
+export type SellStatus = 'ACTIVE' | 'SOLD' | 'RESERVED';
 
 export interface Product {
-    product_id: string;  // UUID
+    product_id: string;
+    member_id: number;
     name: string;
     price: number;
-    sell_status: 'DRAFT' | 'ACTIVE' | 'DELETED' | 'SOLD';
-    ply_url?: string;
+    description: string;
+    sell_status: SellStatus;
+    job_count: number;
+    ply_url: string;
     view_cnt: number;
     likes_cnt: number;
     created_at: string;
-    updated_at?: string;
-    seller?: {
-        member_id: number;
-        nickname: string;
-        img?: string;
-    };
-    images?: ProductImage[];
+    updated_at: string | null;
+    seller_nickname: string;
+    seller_img: string;
+    thumbnail: string | null;
 }
 
 export interface ProductDetail extends Product {
-    description: string;
-    job_count: number;
-    fault_description?: {
-        markdown?: string;
-        status: 'QUEUED' | 'RUNNING' | 'DONE' | 'FAILED';
-        error_msg?: string;
-        completed_at?: string;
-    };
-    job_3dgs?: {
-        status: 'QUEUED' | 'RUNNING' | 'DONE' | 'FAILED';
-        log?: string;
-        error_msg?: string;
-        completed_at?: string;
-    };
+    images?: string[];
 }
 
 export interface ProductListResponse {
@@ -78,15 +75,16 @@ export interface ProductListResponse {
 export interface CreateProductRequest {
     name: string;
     price: number;
-    description?: string;
-    images: File[];  // 15-25장의 이미지 파일
+    description: string;
+    images: string[];
 }
 
 export interface UpdateProductRequest {
     name?: string;
     price?: number;
     description?: string;
-    sell_status?: 'DRAFT' | 'ACTIVE' | 'DELETED' | 'SOLD';
+    images?: string[];
+    sell_status?: SellStatus;
 }
 
 // ============ 사용자 타입 ============
@@ -112,9 +110,13 @@ export interface RegisterRequest {
     img?: string;
 }
 
+/**
+ * 인증 응답 데이터 (envelope.data 안에 있는 실제 데이터)
+ */
 export interface AuthResponse {
-    message: string;
-    user: User;
+    accessToken: string;
+    refreshToken: string;
+    user?: User;
 }
 
 // ============ 좋아요 타입 ============
@@ -130,6 +132,28 @@ export interface ImageUploadResponse {
     filename: string;
     size: number;
     mimeType: string;
+}
+
+export interface PresignedUrlsRequest {
+    files: Array<{
+        filename: string;
+        contentType: string;
+    }>;
+}
+
+export interface PresignedUploadInfo {
+    originalFilename: string;
+    uploadUrl: string;
+    fileUrl: string;
+    key: string;
+}
+
+/**
+ * Presigned URL 응답 데이터 (envelope.data 안에 있는 실제 데이터)
+ */
+export interface PresignedUrlsResponse {
+    uploads: PresignedUploadInfo[];
+    expiresIn: number;
 }
 
 // ============ 채팅 타입 ============
