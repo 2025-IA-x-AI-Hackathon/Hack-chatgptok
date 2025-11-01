@@ -1,10 +1,11 @@
 "use client";
 
-import { Heart, Plus, RefreshCw } from "lucide-react";
+import { Heart, Plus, RefreshCw, Loader2 } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
-import { useProducts } from "@/lib/hooks/use-products";
+import { useInfiniteProducts } from "@/lib/hooks/use-products";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useEffect, useRef } from "react";
 
 // 가격 포맷 함수
 const formatPrice = (price: number) => {
@@ -31,9 +32,44 @@ function ProductItemSkeleton() {
 }
 
 export default function ProductList() {
-    const { data, isLoading, error, refetch } = useProducts({ page: 1, limit: 20, status: "ACTIVE" });
+    const {
+        data,
+        isLoading,
+        error,
+        refetch,
+        fetchNextPage,
+        hasNextPage,
+        isFetchingNextPage
+    } = useInfiniteProducts({ limit: 20, status: "ACTIVE" });
 
-    console.log(data)
+    // Intersection Observer를 위한 ref
+    const observerTarget = useRef<HTMLDivElement>(null);
+
+    // 무한 스크롤 구현
+    useEffect(() => {
+        const observer = new IntersectionObserver(
+            (entries) => {
+                if (entries[0].isIntersecting && hasNextPage && !isFetchingNextPage) {
+                    fetchNextPage();
+                }
+            },
+            { threshold: 0.1 }
+        );
+
+        const currentTarget = observerTarget.current;
+        if (currentTarget) {
+            observer.observe(currentTarget);
+        }
+
+        return () => {
+            if (currentTarget) {
+                observer.unobserve(currentTarget);
+            }
+        };
+    }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
+
+    // 모든 페이지의 상품을 하나의 배열로 병합
+    const allProducts = data?.pages.flatMap((page) => page.products) ?? [];
 
     return (
         <div className="fixed inset-0 flex flex-col bg-background pb-16">
@@ -59,7 +95,7 @@ export default function ProductList() {
                     {error && (
                         <div className="flex flex-col items-center justify-center py-20 px-4">
                             <p className="text-red-600 text-center mb-4">
-                                오류가 발생했습니다: {error.message}
+                                오류가 발생했습니다: {error instanceof Error ? error.message : "알 수 없는 오류"}
                             </p>
                             <button
                                 onClick={() => refetch()}
@@ -71,16 +107,16 @@ export default function ProductList() {
                         </div>
                     )}
 
-                    {!isLoading && !error && data && data.products.length === 0 && (
+                    {!isLoading && !error && allProducts.length === 0 && (
                         <div className="flex items-center justify-center py-20">
                             <p className="text-muted-foreground">등록된 상품이 없습니다.</p>
                         </div>
                     )}
-                    
 
-                    {!isLoading && !error && data && data.products.length > 0 && (
+
+                    {!isLoading && !error && allProducts.length > 0 && (
                         <div className="flex flex-col divide-y divide-border">
-                            {data.products.map((product) => (
+                            {allProducts.map((product) => (
                                 <Link
                                     key={product.product_id}
                                     href={`/products/${product.product_id}`}
@@ -120,6 +156,21 @@ export default function ProductList() {
                                     </div>
                                 </Link>
                             ))}
+
+                            {/* Intersection Observer 타겟 */}
+                            <div ref={observerTarget} className="py-4">
+                                {isFetchingNextPage && (
+                                    <div className="flex items-center justify-center gap-2 text-muted-foreground">
+                                        <Loader2 className="w-5 h-5 animate-spin" />
+                                        <span>더 많은 상품을 불러오는 중...</span>
+                                    </div>
+                                )}
+                                {!hasNextPage && (
+                                    <div className="text-center text-muted-foreground text-sm">
+                                        모든 상품을 불러왔습니다
+                                    </div>
+                                )}
+                            </div>
                         </div>
                     )}
                 </div>

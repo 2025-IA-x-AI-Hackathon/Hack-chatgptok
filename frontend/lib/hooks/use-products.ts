@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import { useMutation, useQuery, useQueryClient, useInfiniteQuery } from "@tanstack/react-query"
 import { productApi } from "@/lib/api"
 import type { ProductFormData } from "@/lib/schemas/product"
 import type { CreateProductRequest, UpdateProductRequest } from "@/lib/types"
@@ -24,7 +24,7 @@ export function useProducts(params?: {
     queryKey: productKeys.list(params || {}),
     queryFn: async () => {
       const response = await productApi.getProducts(params)
-      
+
       if (!response.success) {
         throw new Error(response.error?.message || "상품 목록을 불러오는데 실패했습니다")
       }
@@ -32,6 +32,38 @@ export function useProducts(params?: {
       console.log(response.data)
       return response.data
     },
+  })
+}
+
+// ============ 상품 목록 무한 스크롤 조회 ============
+export function useInfiniteProducts(params?: {
+  limit?: number
+  status?: string
+  search?: string
+}) {
+  return useInfiniteQuery({
+    queryKey: [...productKeys.lists(), "infinite", params || {}],
+    queryFn: async ({ pageParam = 1 }) => {
+      const response = await productApi.getProducts({
+        ...params,
+        page: pageParam,
+      })
+
+      if (!response.success) {
+        throw new Error(response.error?.message || "상품 목록을 불러오는데 실패했습니다")
+      }
+
+      return response.data
+    },
+    getNextPageParam: (lastPage) => {
+      // 다음 페이지가 있으면 페이지 번호 반환, 없으면 undefined
+      if (!lastPage) return undefined
+      if (lastPage.pagination.page < lastPage.pagination.totalPages) {
+        return lastPage.pagination.page + 1
+      }
+      return undefined
+    },
+    initialPageParam: 1,
   })
 }
 
