@@ -64,7 +64,7 @@ app.use(
         },
     }),
 );
-app.use(timeoutMiddleware);
+// app.use(timeoutMiddleware);
 app.use(dbConnectionMiddleware);
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
