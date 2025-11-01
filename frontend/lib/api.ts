@@ -2,6 +2,7 @@
  * API 클라이언트
  *
  * 백엔드와 통신하는 모든 API 호출을 관리합니다.
+ * 세션 기반 인증을 사용합니다 (쿠키).
  *
  * 사용 예시:
  * ```typescript
@@ -94,18 +95,10 @@ function clearTokens(): void {
 /**
  * API 요청 헤더 생성
  */
-function createHeaders(includeAuth: boolean = false): HeadersInit {
+function createHeaders(): HeadersInit {
     const headers: HeadersInit = {
         "Content-Type": "application/json",
     };
-
-    if (includeAuth) {
-        const token = getAccessToken();
-        if (token) {
-            headers["Authorization"] = `Bearer ${token}`;
-        }
-    }
-
     return headers;
 }
 
@@ -119,13 +112,12 @@ function createHeaders(includeAuth: boolean = false): HeadersInit {
  */
 async function apiRequest<T>(
     endpoint: string,
-    options: RequestInit = {},
-    includeAuth: boolean = false
+    options: RequestInit = {}
 ): Promise<ApiResponse<T>> {
 
     try {
         const url = `${API_BASE_URL}${endpoint}`;
-        const headers = createHeaders(includeAuth);
+        const headers = createHeaders();
 
         const response = await fetch(url, {
             ...options,
@@ -133,6 +125,7 @@ async function apiRequest<T>(
                 ...headers,
                 ...options.headers,
             },
+            credentials: 'include', // 쿠키 전송 (세션 인증)
         });
 
         const envelope: ServerEnvelope<T> = await response.json();
@@ -163,6 +156,17 @@ async function apiRequest<T>(
         };
     }
 }
+
+// ============ 헬스 체크 API ============
+
+export const healthApi = {
+    /**
+     * 서버 상태 확인
+     */
+    check: async (): Promise<ApiResponse<{ status: string; message: string }>> => {
+        return apiRequest<{ status: string; message: string }>("/health", { method: "GET" });
+    },
+};
 
 // ============ 상품 API ============
 
@@ -201,13 +205,26 @@ export const productApi = {
     createProduct: async (
         data: CreateProductRequest
     ): Promise<ApiResponse<ProductDetail>> => {
+        // FormData 사용 (이미지 업로드)
+        const formData = new FormData();
+        formData.append("name", data.name);
+        formData.append("price", data.price.toString());
+        if (data.description) {
+            formData.append("description", data.description);
+        }
+
+        // 이미지 파일들 추가
+        data.images.forEach((image, index) => {
+            formData.append("images", image);
+        });
+
         return apiRequest<ProductDetail>(
             "/products",
             {
                 method: "POST",
-                body: JSON.stringify(data),
-            },
-            true // 인증 필요
+                body: formData,
+                headers: {}, // FormData는 Content-Type을 자동 설정
+            }
         );
     },
 
@@ -215,16 +232,15 @@ export const productApi = {
      * 상품 수정
      */
     updateProduct: async (
-        id: number,
+        productId: string,
         data: UpdateProductRequest
     ): Promise<ApiResponse<ProductDetail>> => {
         return apiRequest<ProductDetail>(
-            `/products/${id}`,
+            `/products/${productId}`,
             {
                 method: "PUT",
                 body: JSON.stringify(data),
-            },
-            true // 인증 필요
+            }
         );
     },
 
@@ -233,12 +249,30 @@ export const productApi = {
      */
     deleteProduct: async (id: string): Promise<ApiResponse<{ message: string }>> => {
         return apiRequest<{ message: string }>(
-            `/products/${id}`,
+            `/products/${productId}`,
             {
                 method: "DELETE",
-            },
-            true // 인증 필요
+            }
         );
+    },
+
+    /**
+     * 내 상품 목록 조회
+     */
+    getMyProducts: async (params?: {
+        status?: 'DRAFT' | 'ACTIVE' | 'SOLD' | 'DELETED';
+        page?: number;
+        limit?: number;
+    }): Promise<ApiResponse<ProductListResponse>> => {
+        const queryParams = new URLSearchParams();
+        if (params?.status) queryParams.set("status", params.status);
+        if (params?.page) queryParams.set("page", params.page.toString());
+        if (params?.limit) queryParams.set("limit", params.limit.toString());
+
+        const query = queryParams.toString();
+        const endpoint = `/my-products${query ? `?${query}` : ""}`;
+
+        return apiRequest<ProductListResponse>(endpoint, { method: "GET" });
     },
 
     /**
@@ -278,26 +312,24 @@ export const likeApi = {
     /**
      * 좋아요 추가
      */
-    addLike: async (productId: number): Promise<ApiResponse<LikeResponse>> => {
+    addLike: async (productId: string): Promise<ApiResponse<LikeResponse>> => {
         return apiRequest<LikeResponse>(
             `/products/${productId}/like`,
             {
                 method: "POST",
-            },
-            true // 인증 필요
+            }
         );
     },
 
     /**
      * 좋아요 취소
      */
-    removeLike: async (productId: number): Promise<ApiResponse<LikeResponse>> => {
+    removeLike: async (productId: string): Promise<ApiResponse<LikeResponse>> => {
         return apiRequest<LikeResponse>(
             `/products/${productId}/like`,
             {
                 method: "DELETE",
-            },
-            true // 인증 필요
+            }
         );
     },
 };
@@ -309,96 +341,61 @@ export const authApi = {
      * 로그인
      */
     login: async (data: LoginRequest): Promise<ApiResponse<AuthResponse>> => {
-        const response = await apiRequest<AuthResponse>("/auth/login", {
+        return apiRequest<AuthResponse>("/auth/login", {
             method: "POST",
             body: JSON.stringify(data),
         });
-
-        // 로그인 성공 시 토큰 저장
-        if (response.success && response.data) {
-            setAccessToken(response.data.accessToken);
-            setRefreshToken(response.data.refreshToken);
-        }
-
-        return response;
     },
 
     /**
      * 회원가입
      */
-    register: async (data: RegisterRequest): Promise<ApiResponse<AuthResponse>> => {
-        const response = await apiRequest<AuthResponse>("/auth/register", {
+    signup: async (data: RegisterRequest): Promise<ApiResponse<AuthResponse>> => {
+        return apiRequest<AuthResponse>("/auth/signup", {
             method: "POST",
             body: JSON.stringify(data),
         });
-
-        // 회원가입 성공 시 토큰 저장
-        if (response.success && response.data) {
-            setAccessToken(response.data.accessToken);
-            setRefreshToken(response.data.refreshToken);
-        }
-
-        return response;
-    },
-
-    /**
-     * 토큰 갱신
-     */
-    refreshToken: async (): Promise<ApiResponse<RefreshTokenResponse>> => {
-        const refreshToken = getRefreshToken();
-        if (!refreshToken) {
-            return {
-                success: false,
-                error: {
-                    code: "NO_REFRESH_TOKEN",
-                    message: "리프레시 토큰이 없습니다.",
-                },
-            };
-        }
-
-        const response = await apiRequest<RefreshTokenResponse>("/auth/refresh", {
-            method: "POST",
-            body: JSON.stringify({ refreshToken }),
-        });
-
-        // 토큰 갱신 성공 시 새 토큰 저장
-        if (response.success && response.data) {
-            setAccessToken(response.data.accessToken);
-            setRefreshToken(response.data.refreshToken);
-        }
-
-        return response;
     },
 
     /**
      * 로그아웃
      */
     logout: async (): Promise<ApiResponse<{ message: string }>> => {
-        const response = await apiRequest<{ message: string }>(
+        return apiRequest<{ message: string }>(
             "/auth/logout",
             {
                 method: "POST",
-            },
-            true // 인증 필요
+            }
         );
+    },
+};
 
-        // 로그아웃 후 토큰 제거
-        clearTokens();
+// ============ 사용자 API ============
 
-        return response;
+export const userApi = {
+    /**
+     * 프로필 조회
+     */
+    getProfile: async (): Promise<ApiResponse<User>> => {
+        return apiRequest<User>("/users/profile", { method: "GET" });
     },
 
     /**
-     * 현재 로그인 상태 확인
+     * 프로필 수정
      */
-    isAuthenticated: (): boolean => {
-        return !!getAccessToken();
+    updateProfile: async (data: {
+        nickname?: string;
+        password?: string;
+        img?: string;
+    }): Promise<ApiResponse<{ message: string; user: User }>> => {
+        return apiRequest<{ message: string; user: User }>(
+            "/users/profile",
+            {
+                method: "PUT",
+                body: JSON.stringify(data),
+            }
+        );
     },
-
-    /**
-     * 토큰 제거 (클라이언트 측에서만)
-     */
-    clearTokens,
 };
 
 // ============ 이미지 업로드 API ============
@@ -546,16 +543,10 @@ export const uploadApi = {
             const formData = new FormData();
             formData.append("image", file);
 
-            const token = getAccessToken();
-            const headers: HeadersInit = {};
-            if (token) {
-                headers["Authorization"] = `Bearer ${token}`;
-            }
-
             const response = await fetch(`${API_BASE_URL}/upload/image`, {
                 method: "POST",
-                headers,
                 body: formData,
+                credentials: 'include',
             });
 
             const data = await response.json();
@@ -563,9 +554,9 @@ export const uploadApi = {
             if (!response.ok) {
                 return {
                     success: false,
-                    error: data.error || {
+                    error: {
                         code: "UPLOAD_ERROR",
-                        message: "이미지 업로드에 실패했습니다.",
+                        message: data.error || "이미지 업로드에 실패했습니다.",
                     },
                 };
             }
@@ -588,85 +579,13 @@ export const uploadApi = {
     },
 };
 
-// ============ 채팅 API ============
-
-export const chatApi = {
-    /**
-     * 채팅방 목록 조회
-     */
-    getRooms: async (): Promise<ApiResponse<{ rooms: ChatRoom[] }>> => {
-        return apiRequest<{ rooms: ChatRoom[] }>(
-            "/chat/rooms",
-            {
-                method: "GET",
-            },
-            true // 인증 필요
-        );
-    },
-
-    /**
-     * 채팅방 생성
-     */
-    createRoom: async (
-        data: CreateChatRoomRequest
-    ): Promise<ApiResponse<ChatRoomDetail>> => {
-        return apiRequest<ChatRoomDetail>(
-            "/chat/rooms",
-            {
-                method: "POST",
-                body: JSON.stringify(data),
-            },
-            true // 인증 필요
-        );
-    },
-
-    /**
-     * 채팅 메시지 조회
-     */
-    getMessages: async (
-        roomId: string,
-        params?: { page?: number; limit?: number }
-    ): Promise<ApiResponse<ChatMessagesResponse>> => {
-        const queryParams = new URLSearchParams();
-        if (params?.page) queryParams.set("page", params.page.toString());
-        if (params?.limit) queryParams.set("limit", params.limit.toString());
-
-        const query = queryParams.toString();
-        const endpoint = `/chat/rooms/${roomId}/messages${query ? `?${query}` : ""}`;
-
-        return apiRequest<ChatMessagesResponse>(
-            endpoint,
-            {
-                method: "GET",
-            },
-            true // 인증 필요
-        );
-    },
-
-    /**
-     * 메시지 전송
-     */
-    sendMessage: async (
-        roomId: string,
-        data: SendMessageRequest
-    ): Promise<ApiResponse<ChatMessage>> => {
-        return apiRequest<ChatMessage>(
-            `/chat/rooms/${roomId}/messages`,
-            {
-                method: "POST",
-                body: JSON.stringify(data),
-            },
-            true // 인증 필요
-        );
-    },
-};
-
 // ============ 기본 export ============
 
 export default {
+    health: healthApi,
     product: productApi,
     like: likeApi,
     auth: authApi,
+    user: userApi,
     upload: uploadApi,
-    chat: chatApi,
 };

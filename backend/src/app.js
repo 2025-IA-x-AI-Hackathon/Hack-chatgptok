@@ -16,7 +16,7 @@ const app = express();
 
 app.use(
     cors({
-        origin: 'http://52.78.124.23:3000',
+        origin: 'http://localhost:3000',
         credentials: true, // 쿠키 전송을 위해 필요
     }),
 );

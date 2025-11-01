@@ -64,7 +64,12 @@ export interface ProductDetail extends Product {
 
 export interface ProductListResponse {
     products: Product[];
-    pagination: Pagination;
+    pagination: {
+        total: number;
+        page: number;
+        limit: number;
+        total_pages: number;
+    };
 }
 
 export interface CreateProductRequest {
@@ -84,11 +89,12 @@ export interface UpdateProductRequest {
 
 // ============ 사용자 타입 ============
 export interface User {
-    id: number;
-    name: string;
-    email?: string;
-    location: string;
-    profileImage: string;
+    member_id: number;
+    email: string;
+    nickname: string;
+    img?: string;
+    created_at: string;
+    updated_at?: string;
 }
 
 // ============ 인증 타입 ============
@@ -113,20 +119,11 @@ export interface AuthResponse {
     user?: User;
 }
 
-export interface RefreshTokenRequest {
-    refreshToken: string;
-}
-
-export interface RefreshTokenResponse {
-    accessToken: string;
-    refreshToken: string;
-}
-
 // ============ 좋아요 타입 ============
 export interface LikeResponse {
-    productId: number;
-    likes: number;
-    isLiked: boolean;
+    product_id: string;
+    likes_cnt: number;
+    is_liked: boolean;
 }
 
 // ============ 이미지 업로드 타입 ============
