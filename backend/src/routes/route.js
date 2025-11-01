@@ -164,7 +164,7 @@ router.post('/auth/login', authController.login);
  *     summary: 로그아웃
  *     tags: [Auth]
  *     security:
- *       - cookieAuth: []
+ *       - bearerAuth: []
  *     responses:
  *       200:
  *         description: 로그아웃 성공
@@ -236,7 +236,7 @@ router.post('/auth/refresh', authController.refreshToken);
  *     description: 인증된 사용자 본인의 정보를 조회합니다.
  *     tags: [Users]
  *     security:
- *       - cookieAuth: []
+ *       - bearerAuth: []
  *     responses:
  *       200:
  *         description: 내 정보 조회 성공
@@ -319,7 +319,7 @@ router.get('/users/me', authenticateToken, userController.getMe);
  *     description: 이미지 파일을 S3에 업로드하기 위한 Pre-signed URL을 생성합니다. 지원 형식 - image/jpeg, image/jpg, image/png, image/gif, image/webp, image/svg+xml
  *     tags: [Upload]
  *     security:
- *       - cookieAuth: []
+ *       - bearerAuth: []
  *     parameters:
  *       - in: query
  *         name: filename
@@ -410,7 +410,7 @@ router.get('/upload/presigned-url', authenticateToken, uploadController.getPresi
  *     description: 여러 이미지 파일을 S3에 업로드하기 위한 Pre-signed URL을 일괄 생성합니다. 최대 50개까지 가능하며, 이미지 파일만 허용됩니다.
  *     tags: [Upload]
  *     security:
- *       - cookieAuth: []
+ *       - bearerAuth: []
  *     requestBody:
  *       required: true
  *       content:
@@ -619,7 +619,7 @@ router.get('/users/:userId/profile', userController.getProfile);
  *     description: 인증된 사용자 본인의 프로필 정보를 수정합니다.
  *     tags: [Users]
  *     security:
- *       - cookieAuth: []
+ *       - bearerAuth: []
  *     requestBody:
  *       required: true
  *       content:
@@ -829,7 +829,7 @@ router.get('/products/:productId', productController.getProductById);
  *       3. POST /api/v1/products - 업로드된 이미지 URL과 함께 상품 등록
  *     tags: [Products]
  *     security:
- *       - cookieAuth: []
+ *       - bearerAuth: []
  *     requestBody:
  *       required: true
  *       content:
@@ -905,7 +905,7 @@ router.post('/products', authenticateToken, productController.createProduct);
  *     summary: 상품 수정 (본인 상품만 가능)
  *     tags: [Products]
  *     security:
- *       - cookieAuth: []
+ *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: productId
@@ -990,7 +990,7 @@ router.put('/products/:productId', authenticateToken, productController.updatePr
  *     description: 상품을 DELETED 상태로 변경합니다. SOLD 상태인 상품은 삭제할 수 없습니다.
  *     tags: [Products]
  *     security:
- *       - cookieAuth: []
+ *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: productId
@@ -1045,7 +1045,7 @@ router.delete('/products/:productId', authenticateToken, productController.delet
  *     summary: 내가 등록한 상품 목록 조회
  *     tags: [Products]
  *     security:
- *       - cookieAuth: []
+ *       - bearerAuth: []
  *     parameters:
  *       - in: query
  *         name: status
@@ -1087,7 +1087,7 @@ router.get('/my-products', authenticateToken, productController.getMyProducts);
  *     summary: 상품 좋아요 추가
  *     tags: [Products]
  *     security:
- *       - cookieAuth: []
+ *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: productId
@@ -1142,7 +1142,7 @@ router.post('/products/:productId/like', authenticateToken, productController.li
  *     summary: 상품 좋아요 취소
  *     tags: [Products]
  *     security:
- *       - cookieAuth: []
+ *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: productId

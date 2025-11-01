@@ -20,11 +20,11 @@ const options = {
         ],
         components: {
             securitySchemes: {
-                cookieAuth: {
-                    type: 'apiKey',
-                    in: 'cookie',
-                    name: 'connect.sid',
-                    description: '세션 쿠키 인증',
+                bearerAuth: {
+                    type: 'http',
+                    scheme: 'bearer',
+                    bearerFormat: 'JWT',
+                    description: 'JWT Access Token 인증 (Authorization: Bearer <token>)',
                 },
             },
             schemas: {
