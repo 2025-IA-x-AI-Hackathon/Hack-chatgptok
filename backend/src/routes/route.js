@@ -4,7 +4,7 @@ import userController from '../controllers/userController.js';
 import productController from '../controllers/productController.js';
 import authController from '../controllers/authController.js';
 import chatController from '../controllers/chatController.js';
-import uploadController, { upload } from '../controllers/uploadController.js';
+import uploadController from '../controllers/uploadController.js';
 
 // middleware
 import isAuthenticated from '../middleware/auth.js';
@@ -701,61 +701,6 @@ router.post('/chat/rooms/:chatRoomId/read', authenticateToken, chatController.ma
 
 // AI description generation route
 router.post('/products/ai/generate-description', productController.generateDescription);
-
-/**
- * @swagger
- * /api/v1/upload/image:
- *   post:
- *     summary: 이미지 업로드 및 Pre-signed URL 생성
- *     tags: [Upload]
- *     security:
- *       - cookieAuth: []
- *     requestBody:
- *       required: true
- *       content:
- *         multipart/form-data:
- *           schema:
- *             type: object
- *             properties:
- *               image:
- *                 type: string
- *                 format: binary
- *                 description: 업로드할 이미지 파일 (jpg/png/gif/webp)
- *     responses:
- *       200:
- *         description: 이미지 업로드 성공
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                   example: true
- *                 message:
- *                   type: string
- *                   example: Image uploaded successfully
- *                 data:
- *                   type: object
- *                   properties:
- *                     fileName:
- *                       type: string
- *                       example: 550e8400-e29b-41d4-a716-446655440000.jpg
- *                     s3Key:
- *                       type: string
- *                       example: images/550e8400-e29b-41d4-a716-446655440000.jpg
- *                     presignedUrl:
- *                       type: string
- *                       example: https://ss-s3-project.s3.ap-northeast-2.amazonaws.com/...
- *                     publicUrl:
- *                       type: string
- *                       example: https://ss-s3-project.s3.ap-northeast-2.amazonaws.com/images/550e8400-e29b-41d4-a716-446655440000.jpg
- *       400:
- *         description: 파일이 업로드되지 않음
- *       401:
- *         description: 인증 필요
- */
-router.post('/upload/image', authenticateToken, upload.single('image'), uploadController.uploadImage);
 
 // TODO: 추가 기능 라우트
 // - 채팅 기능
