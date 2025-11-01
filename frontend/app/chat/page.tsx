@@ -4,6 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
+import Link from "next/link";
 
 type ChatFilter = "전체" | "구매자" | "판매자" | "읽지 않음";
 
@@ -89,7 +90,7 @@ export default function ChatPage() {
     <div className="min-h-screen bg-background">
       {/* Header with filter badges */}
       <div className="sticky top-0 z-10 bg-background border-b border-border">
-        <div className="max-w-2xl mx-auto px-4 py-4">
+        <div className="w-full mx-auto px-4 sm:px-6 md:px-8 lg:px-12 xl:max-w-7xl py-4">
           <h1 className="text-2xl font-bold mb-4">채팅</h1>
           <div className="flex gap-2 overflow-x-auto pb-2">
             {filters.map((filter) => (
@@ -112,7 +113,7 @@ export default function ChatPage() {
       </div>
 
       {/* Chat List */}
-      <div className="max-w-2xl mx-auto">
+      <div className="w-full mx-auto px-4 sm:px-6 md:px-8 lg:px-12 xl:max-w-7xl">
         {filteredChats.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
             <p className="text-lg">채팅이 없습니다</p>
@@ -120,16 +121,17 @@ export default function ChatPage() {
         ) : (
           <div className="divide-y divide-border">
             {filteredChats.map((chat) => (
-              <div
+              <Link
                 key={chat.id}
+                href={`/chat/${chat.id}`}
                 className={cn(
-                  "px-4 py-4 hover:bg-accent/50 cursor-pointer transition-colors",
+                  "block px-4 py-4 hover:bg-accent/50 cursor-pointer transition-colors",
                   chat.unreadCount > 0 ? "bg-background" : "bg-muted/30"
                 )}
               >
                 <div className="flex items-center gap-3">
                   {/* Overlapped Images: User Avatar (back) + Product (front) */}
-                  <div className="relative flex-shrink-0">
+                  <div className="relative shrink-0">
                     {/* User Avatar - Background with white fill */}
                     <div className="w-12 h-12 rounded-full overflow-hidden bg-white border-2 border-background">
                       <Avatar className="w-full h-full">
@@ -195,7 +197,7 @@ export default function ChatPage() {
                     </div>
                   </div>
                 </div>
-              </div>
+              </Link>
             ))}
           </div>
         )}
