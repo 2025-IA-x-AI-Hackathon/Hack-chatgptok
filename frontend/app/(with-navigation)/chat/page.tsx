@@ -89,8 +89,8 @@ export default function ChatPage() {
   return (
     <div className="min-h-screen bg-background">
       {/* Header with filter badges */}
-      <div className="sticky top-0 z-10 bg-background border-b border-border">
-        <div className="w-full mx-auto px-4 sm:px-6 md:px-8 lg:px-12 xl:max-w-7xl py-4">
+      <div className="sticky top-0 z-10 bg-background border-b">
+        <div className="max-w-7xl mx-auto px-4 py-6">
           <h1 className="text-2xl font-bold mb-4">채팅</h1>
           <div className="flex gap-2 overflow-x-auto pb-2">
             {filters.map((filter) => (
@@ -113,7 +113,7 @@ export default function ChatPage() {
       </div>
 
       {/* Chat List */}
-      <div className="w-full mx-auto px-4 sm:px-6 md:px-8 lg:px-12 xl:max-w-7xl">
+      <div className="max-w-7xl mx-auto px-4">
         {filteredChats.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
             <p className="text-lg">채팅이 없습니다</p>

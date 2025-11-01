@@ -79,9 +79,9 @@ const formatPrice = (price: number) => {
 
 export default function ProductList() {
     return (
-        <div className="pb-20">
-            <div className="max-w-7xl mx-auto">
-                <h2 className="text-2xl font-bold mb-6 mt-4 px-4">인기 상품</h2>
+        <div className="min-h-screen bg-background pb-20">
+            <div className="max-w-7xl mx-auto px-4 py-6">
+                <h2 className="text-2xl font-bold mb-6">인기 상품</h2>
                 <div className="flex flex-col divide-y divide-border">
                     {products.map((product) => (
                         <Link
