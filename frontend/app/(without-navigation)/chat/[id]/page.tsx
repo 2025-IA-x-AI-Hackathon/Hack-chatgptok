@@ -3,7 +3,6 @@ import { use, useState, useRef, useEffect } from 'react'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Card, CardContent } from '@/components/ui/card'
 import { Send, Image as ImageIcon, ChevronLeft } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { cn } from '@/lib/utils'
@@ -43,7 +42,7 @@ export default function ChatRoom({
     id: '1',
     name: 'iPhone 15 Pro Max',
     price: 1590000,
-    thumbnail: 'https://images.unsplash.com/photo-1696446702094-b2c6cc0a0b38?w=400&h=400&fit=crop'
+    thumbnail: 'https://placehold.co/400x400/e2e8f0/64748b?text=iPhone+15'
   }
   
   // 샘플 메시지 데이터
@@ -161,7 +160,7 @@ export default function ChatRoom({
   }
   
   // Enter 키로 메시지 전송
-  const handleKeyPress = (e: React.KeyboardEvent) => {
+  const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault()
       handleSendMessage()
@@ -195,9 +194,12 @@ export default function ChatRoom({
       </div>
 
       {/* 상단 제품 정보 */}
-      <Card className="rounded-none border-x-0 border-t-0 shrink-0 mt-14">
-        <CardContent className="p-4">
-          <div className="flex items-center gap-3">
+      <div className="border-b bg-white shrink-0 mt-14">
+        <div className="max-w-7xl mx-auto px-4 py-4">
+          <button
+            onClick={() => router.push(`/products/${product.id}`)}
+            className="flex items-center gap-3 w-full text-left hover:bg-accent/50 transition-colors rounded-lg p-2 -m-2"
+          >
             <img
               src={product.thumbnail}
               alt={product.name}
@@ -207,9 +209,9 @@ export default function ChatRoom({
               <h3 className="font-semibold text-sm">{product.name}</h3>
               <p className="text-sm font-bold text-blue-600">{formatPrice(product.price)}</p>
             </div>
-          </div>
-        </CardContent>
-      </Card>
+          </button>
+        </div>
+      </div>
       
       {/* 채팅 메시지 영역 */}
       <div className="flex-1 overflow-y-auto bg-gray-50">
@@ -294,7 +296,7 @@ export default function ChatRoom({
           <Input
             value={message}
             onChange={(e) => setMessage(e.target.value)}
-            onKeyPress={handleKeyPress}
+            onKeyDown={handleKeyDown}
             placeholder="메시지를 입력하세요..."
             className="flex-1"
           />
