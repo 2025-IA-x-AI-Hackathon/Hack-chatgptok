@@ -64,7 +64,7 @@ export default function ChatRoom({
         setLoading(true)
 
         // JWT 토큰 가져오기
-        const token = sessionStorage.getItem('accessToken')
+        const token = localStorage.getItem('accessToken')
         if (!token) {
           setError('로그인이 필요합니다.')
           return
