@@ -1,6 +1,6 @@
 "use client";
 
-import { Heart } from "lucide-react";
+import { Heart, Plus } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
 
@@ -79,9 +79,9 @@ const formatPrice = (price: number) => {
 
 export default function ProductList() {
     return (
-        <div className="pb-20">
-            <div className="max-w-7xl mx-auto">
-                <h2 className="text-2xl font-bold mb-6 mt-4 px-4">인기 상품</h2>
+        <div className="min-h-screen bg-background pb-20">
+            <div className="max-w-7xl mx-auto px-4 py-6">
+                <h2 className="text-2xl font-bold mb-6">인기 상품</h2>
                 <div className="flex flex-col divide-y divide-border">
                     {products.map((product) => (
                         <Link
@@ -125,6 +125,14 @@ export default function ProductList() {
                     ))}
                 </div>
             </div>
+
+            {/* 상품 등록 플로팅 버튼 */}
+            <Link
+                href="/products/new"
+                className="fixed bottom-20 right-4 w-14 h-14 bg-primary text-primary-foreground rounded-full flex items-center justify-center shadow-lg hover:bg-primary/90 transition-colors z-40"
+            >
+                <Plus className="w-6 h-6" />
+            </Link>
         </div>
     );
 }
