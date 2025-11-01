@@ -18,12 +18,14 @@ const UploadController = {
         try {
             const memberId = req.user?.memberId;
             if (!memberId) {
+                console.log('[Upload] 인증되지 않은 사용자');
                 return res.status(401).json({ error: 'Unauthorized' });
             }
 
             const { filename, contentType } = req.query;
 
             if (!filename || !contentType) {
+                console.log('[Upload] filename 또는 contentType이 없습니다');
                 return res
                     .status(400)
                     .json({ error: 'filename and contentType are required' });
@@ -40,6 +42,7 @@ const UploadController = {
             ];
 
             if (!allowedTypes.includes(contentType)) {
+                console.log('[Upload] 지원하지 않는 파일 형식입니다');
                 return res
                     .status(400)
                     .json({ error: 'Only image files are allowed' });
@@ -65,15 +68,25 @@ const UploadController = {
 
             const fileUrl = `https://${process.env.AWS_BUCKET_NAME}.s3.${process.env.AWS_REGION}.amazonaws.com/${key}`;
 
-            res.status(200).json({
+            console.log('[Upload] 단일 파일 업로드 성공 - 파일명:', filename, '파일 URL:', fileUrl);
+
+            const uploadResponse = {
                 uploadUrl,
                 fileUrl,
                 key,
                 expiresIn: 900,
+            };
+            res.status(200).json({
+                success: true,
+                message: '단일 파일 업로드 성공',
+                data: uploadResponse,
             });
         } catch (error) {
-            console.error('Get presigned URL error:', error);
-            res.status(500).json({ error: error.message });
+            console.error('[Upload] 단일 파일 업로드 오류:', error);
+            res.status(500).json({
+                success: false,
+                message: error.message,
+            });
         }
     },
 
@@ -82,21 +95,33 @@ const UploadController = {
         try {
             const memberId = req.user?.memberId;
             if (!memberId) {
-                return res.status(401).json({ error: 'Unauthorized' });
+                console.log('[Upload] 인증되지 않은 사용자');
+                return res.status(401).json({
+                    success: false,
+                    message: '인증되지 않은 사용자',
+                });
             }
 
             const { files } = req.body; // [{ filename, contentType }]
 
             if (!files || !Array.isArray(files) || files.length === 0) {
+                console.log('[Upload] files 배열이 없습니다');
                 return res
                     .status(400)
-                    .json({ error: 'files array is required' });
+                    .json({
+                        success: false,
+                        message: 'files 배열이 필요합니다',
+                    });
             }
 
             if (files.length > 50) {
+                console.log('[Upload] 최대 50개의 파일만 허용됩니다');
                 return res
                     .status(400)
-                    .json({ error: 'Maximum 50 files allowed at once' });
+                    .json({
+                        success: false,
+                        message: '최대 50개의 파일만 허용됩니다',
+                    });
             }
 
             // 이미지 파일만 허용
@@ -114,15 +139,19 @@ const UploadController = {
                     const { filename, contentType } = file;
 
                     if (!filename || !contentType) {
-                        throw new Error(
-                            'Each file must have filename and contentType',
-                        );
+                        console.log('[Upload] 각 파일에는 filename과 contentType이 필요합니다');
+                        return res.status(400).json({
+                            success: false,
+                            message: '각 파일에는 filename과 contentType이 필요합니다',
+                        });
                     }
 
                     if (!allowedTypes.includes(contentType)) {
-                        throw new Error(
-                            `Invalid file type: ${contentType}`,
-                        );
+                        console.log('[Upload] 지원하지 않는 파일 형식입니다');
+                        return res.status(400).json({
+                            success: false,
+                            message: `지원하지 않는 파일 형식입니다: ${contentType}`,
+                        });
                     }
 
                     // 파일 확장자 추출
@@ -158,13 +187,24 @@ const UploadController = {
                 }),
             );
 
-            res.status(200).json({
+            const uploadResponse = {
                 uploads: uploadData,
                 expiresIn: 900,
+            };
+
+            console.log('[Upload] 여러 파일 업로드 성공 - 파일명:', files.map((file) => file.filename), '파일 URL:', uploadData.map((file) => file.fileUrl));
+
+            res.status(200).json({
+                success: true,
+                message: '여러 파일 업로드 성공',
+                data: uploadResponse,
             });
         } catch (error) {
-            console.error('Get multiple presigned URLs error:', error);
-            res.status(500).json({ error: error.message });
+            console.error('[Upload] 여러 파일 업로드 오류:', error);
+            res.status(500).json({
+                success: false,
+                message: error.message,
+            });
         }
     },
 };
