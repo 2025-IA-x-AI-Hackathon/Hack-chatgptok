@@ -2,19 +2,17 @@
 Job management API endpoints
 """
 import asyncio
-import secrets
-import string
 from pathlib import Path
 from typing import List
-from fastapi import APIRouter, Depends, File, UploadFile, HTTPException, Form, Query
+from fastapi import APIRouter, HTTPException, Query
 from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 
 from app.config import settings
 from app.db import crud
 from app.db.database import SessionLocal
-from app.schemas.job import JobCreateResponse, JobStatusResponse, JobListResponse
-from app.utils.image import validate_image_file, save_image
+from app.schemas.job import JobCreateRequest, JobCreateResponse, JobStatusResponse, JobListResponse
+from app.utils.s3_utils import download_s3_images
 from app.utils.logger import setup_logger
 from app.core.colmap import COLMAPPipeline
 from app.core.gaussian_splatting import GaussianSplattingTrainer
@@ -35,114 +33,76 @@ def get_db() -> Session:
         db.close()
 
 
-def generate_job_id() -> str:
-    """Generate 8-character alphanumeric job ID"""
-    chars = string.ascii_letters + string.digits
-    return ''.join(secrets.choice(chars) for _ in range(8))
-
-
-def generate_pub_key() -> str:
-    """Generate 10-character alphanumeric public key"""
-    chars = string.ascii_letters + string.digits
-    return ''.join(secrets.choice(chars) for _ in range(10))
-
-
 @router.post("/jobs", response_model=JobCreateResponse)
-async def create_job(
-    files: List[UploadFile] = File(...),
-    original_resolution: bool = Form(False),
-    iterations: int = Form(None)
-):
+async def create_job(request: JobCreateRequest):
     """
-    Create new reconstruction job
+    Create new reconstruction job with S3 images
 
     Args:
-        files: List of uploaded image files
-        original_resolution: Whether to use original image resolution
-        iterations: Number of training iterations (optional, defaults to settings.TRAINING_ITERATIONS)
+        request: Job creation request with product_id and S3 image paths
 
     Returns:
-        Job creation response with job_id and pub_key
+        Job creation response with product_id and status
     """
     # Validate image count (IMPLEMENT.md: 3~20장)
-    if len(files) < settings.MIN_IMAGES:
-        raise HTTPException(400, f"이미지 {settings.MIN_IMAGES}~{settings.MAX_IMAGES}장만 허용합니다. (현재: {len(files)}장)")
-    if len(files) > settings.MAX_IMAGES:
-        raise HTTPException(400, f"이미지 {settings.MIN_IMAGES}~{settings.MAX_IMAGES}장만 허용합니다. (현재: {len(files)}장)")
-
-    # Validate all images and calculate total size
-    total_size = 0
-    for file in files:
-        validate_image_file(file)
-        # Read size (file pointer already at start after validate_image_file)
-        content = await file.read()
-        total_size += len(content)
-        # Reset for later save
-        await file.seek(0)
-
-    # Check total upload size (IMPLEMENT.md: 최대 500MB)
-    max_total_bytes = settings.MAX_TOTAL_SIZE_MB * 1024 * 1024
-    if total_size > max_total_bytes:
-        raise HTTPException(
-            413,
-            f"전체 업로드 크기 초과. 합계: {total_size / 1024 / 1024:.1f}MB, 최대: {settings.MAX_TOTAL_SIZE_MB}MB"
-        )
-
-    # Generate unique IDs
-    job_id = generate_job_id()
-    pub_key = generate_pub_key()
+    image_count = len(request.s3_images)
+    if image_count < settings.MIN_IMAGES:
+        raise HTTPException(400, f"이미지 {settings.MIN_IMAGES}~{settings.MAX_IMAGES}장만 허용합니다. (현재: {image_count}장)")
+    if image_count > settings.MAX_IMAGES:
+        raise HTTPException(400, f"이미지 {settings.MIN_IMAGES}~{settings.MAX_IMAGES}장만 허용합니다. (현재: {image_count}장)")
 
     # Create job directory
-    job_dir = settings.DATA_DIR / job_id
+    job_dir = settings.DATA_DIR / request.product_id
     upload_dir = job_dir / "upload" / "images"
     upload_dir.mkdir(parents=True, exist_ok=True)
 
-    logger.info(f"Created job {job_id} with {len(files)} images")
+    logger.info(f"Created job for product {request.product_id} with {image_count} S3 images")
 
-    # Save images
-    for file in files:
-        output_path = upload_dir / file.filename
-        await save_image(file, output_path, resize=not original_resolution)
+    # Download images from S3
+    try:
+        downloaded_count = await download_s3_images(request.s3_images, upload_dir)
+        logger.info(f"Downloaded {downloaded_count}/{image_count} images from S3")
+    except Exception as e:
+        logger.error(f"Failed to download S3 images for {request.product_id}: {e}")
+        raise HTTPException(500, f"S3 이미지 다운로드 실패: {str(e)}")
 
     # Create database record
     db = SessionLocal()
     try:
         crud.create_job(
             db=db,
-            job_id=job_id,
-            pub_key=pub_key,
-            image_count=len(files),
-            original_resolution=original_resolution,
-            iterations=iterations
+            product_id=request.product_id,
+            image_count=downloaded_count,
+            iterations=request.iterations
         )
         db.commit()
     finally:
         db.close()
 
-    # Start background processing
-    asyncio.create_task(process_job(job_id, original_resolution))
+    # Start background processing (always resize images to 1600px)
+    asyncio.create_task(process_job(request.product_id))
 
     return JobCreateResponse(
-        job_id=job_id,
-        pub_key=pub_key,
-        original_resolution=original_resolution
+        product_id=request.product_id,
+        status="PENDING",
+        message=f"Job created with {downloaded_count} images"
     )
 
 
-@router.get("/jobs/{job_id}/status", response_model=JobStatusResponse)
-async def get_job_status(job_id: str):
+@router.get("/jobs/{product_id}/status", response_model=JobStatusResponse)
+async def get_job_status(product_id: str):
     """
     Get job status and logs
 
     Args:
-        job_id: Job identifier
+        product_id: Product UUID
 
     Returns:
         Job status response
     """
     db = SessionLocal()
     try:
-        job = crud.get_job_by_id(db, job_id)
+        job = crud.get_job_by_product_id(db, product_id)
         if not job:
             raise HTTPException(404, "Job not found")
 
@@ -152,7 +112,7 @@ async def get_job_status(job_id: str):
             # Count how many jobs are ahead in the queue
             pending_jobs = crud.get_pending_jobs(db)
             for idx, pending_job in enumerate(pending_jobs):
-                if pending_job.job_id == job_id:
+                if pending_job.product_id == product_id:
                     queue_position = idx + 1
                     break
 
@@ -173,7 +133,7 @@ async def get_job_status(job_id: str):
                 log_tail = []
         else:
             # Read last 50 lines of log
-            log_file = settings.DATA_DIR / job_id / "logs" / "process.log"
+            log_file = settings.DATA_DIR / product_id / "logs" / "process.log"
             log_tail = []
             if log_file.exists():
                 with open(log_file, 'r') as f:
@@ -183,10 +143,10 @@ async def get_job_status(job_id: str):
         # Build viewer URL if completed
         viewer_url = None
         if job.status == "COMPLETED":
-            viewer_url = f"{settings.BASE_URL}/v/{job.pub_key}"
+            viewer_url = f"{settings.BASE_URL}/v/{job.product_id}"
 
         return JobStatusResponse(
-            job_id=job.job_id,
+            product_id=job.product_id,
             status=job.status,
             step=job.step,
             progress=job.progress,
@@ -228,7 +188,7 @@ async def get_queue_status():
             "pending_count": len(pending_jobs),
             "running_jobs": [
                 {
-                    "job_id": job.job_id,
+                    "product_id": job.product_id,
                     "created_at": job.created_at.isoformat() if job.created_at else None,
                     "started_at": job.started_at.isoformat() if job.started_at else None
                 }
@@ -236,7 +196,7 @@ async def get_queue_status():
             ],
             "pending_jobs": [
                 {
-                    "job_id": job.job_id,
+                    "product_id": job.product_id,
                     "position": idx + 1,
                     "created_at": job.created_at.isoformat() if job.created_at else None
                 }
@@ -247,16 +207,16 @@ async def get_queue_status():
         db.close()
 
 
-@router.get("/pub/{pub_key}/cloud.ply")
+@router.get("/pub/{product_id}/cloud.ply")
 async def get_point_cloud(
-    pub_key: str,
+    product_id: str,
     quality: str = Query("full", regex="^(light|medium|full)$")
 ):
     """
     Download point cloud PLY file with quality options
 
     Args:
-        pub_key: Public key
+        product_id: Product UUID
         quality: Quality level (light=5%, medium=20%, full=100%)
             - light: ~0.5MB, fastest loading, for thumbnails
             - medium: ~2-5MB, good quality, for list views
@@ -266,13 +226,13 @@ async def get_point_cloud(
         PLY file with requested quality level
 
     Examples:
-        /pub/{pub_key}/cloud.ply?quality=light   # Fast thumbnail
-        /pub/{pub_key}/cloud.ply?quality=medium  # List view
-        /pub/{pub_key}/cloud.ply?quality=full    # Detail view (default)
+        /pub/{product_id}/cloud.ply?quality=light   # Fast thumbnail
+        /pub/{product_id}/cloud.ply?quality=medium  # List view
+        /pub/{product_id}/cloud.ply?quality=full    # Detail view (default)
     """
     db = SessionLocal()
     try:
-        job = crud.get_job_by_pub_key(db, pub_key)
+        job = crud.get_job_by_product_id(db, product_id)
         if not job:
             raise HTTPException(404, "Job not found")
 
@@ -294,7 +254,7 @@ async def get_point_cloud(
             fallback_filename = "point_cloud.ply"
 
         # Build file path with iterations support
-        iteration_dir = settings.DATA_DIR / job.job_id / "output" / "point_cloud" / f"iteration_{iterations}"
+        iteration_dir = settings.DATA_DIR / job.product_id / "output" / "point_cloud" / f"iteration_{iterations}"
         ply_file = iteration_dir / base_filename
 
         if not ply_file.exists():
@@ -304,14 +264,14 @@ async def get_point_cloud(
         if not ply_file.exists():
             # If lightweight version not found, fall back to full quality
             if quality != "full":
-                logger.warning(f"Lightweight version '{quality}' not found for {pub_key}, serving full quality")
-                return await get_point_cloud(pub_key, quality="full")
+                logger.warning(f"Lightweight version '{quality}' not found for {product_id}, serving full quality")
+                return await get_point_cloud(product_id, quality="full")
             else:
                 raise HTTPException(404, "Point cloud file not found")
 
         # Get file size for logging
         file_size_mb = ply_file.stat().st_size / (1024 * 1024)
-        logger.info(f"Serving PLY file for {pub_key}: {ply_file.name} ({file_size_mb:.2f} MB, quality={quality})")
+        logger.info(f"Serving PLY file for {product_id}: {ply_file.name} ({file_size_mb:.2f} MB, quality={quality})")
 
         return FileResponse(
             path=str(ply_file),
@@ -326,49 +286,48 @@ async def get_point_cloud(
         db.close()
 
 
-@router.get("/pub/{pub_key}/scene.splat", deprecated=True)
-async def get_splat_file(pub_key: str):
+@router.get("/pub/{product_id}/scene.splat", deprecated=True)
+async def get_splat_file(product_id: str):
     """
     [DEPRECATED] Splat format is no longer supported.
 
-    PlayCanvas viewer uses PLY format. Use `/recon/pub/{pub_key}/cloud.ply` instead.
+    PlayCanvas viewer uses PLY format. Use `/recon/pub/{product_id}/cloud.ply` instead.
 
     Args:
-        pub_key: Public key
+        product_id: Product UUID
 
     Returns:
         HTTP 410 Gone
     """
     raise HTTPException(
         status_code=410,
-        detail="Splat format is no longer supported. Use /recon/pub/{pub_key}/cloud.ply instead. PlayCanvas viewer uses PLY format."
+        detail="Splat format is no longer supported. Use /recon/pub/{product_id}/cloud.ply instead. PlayCanvas viewer uses PLY format."
     )
 
 
-async def process_job(job_id: str, original_resolution: bool):
+async def process_job(product_id: str):
     """
     Background job processing pipeline with step tracking
 
     Args:
-        job_id: Job identifier
-        original_resolution: Whether to use original resolution
+        product_id: Product UUID
     """
     async with job_semaphore:
         db = SessionLocal()
-        job_dir = settings.DATA_DIR / job_id
+        job_dir = settings.DATA_DIR / product_id
         log_dir = job_dir / "logs"
         log_dir.mkdir(parents=True, exist_ok=True)
         log_file_path = log_dir / "process.log"
 
         try:
             # Update status to PROCESSING
-            crud.update_job_status(db, job_id, "PROCESSING")
+            crud.update_job_status(db, product_id, "PROCESSING")
             # Preflight step removed - now runs once at server startup
-            crud.update_job_step(db, job_id, "COLMAP_FEAT", 15)
+            crud.update_job_step(db, product_id, "COLMAP_FEAT", 15)
             db.commit()
 
             with open(log_file_path, 'w') as log_file:
-                log_file.write(f">> [Job {job_id}] Starting reconstruction pipeline\n")
+                log_file.write(f">> [Job {product_id}] Starting reconstruction pipeline\n")
                 log_file.flush()
 
                 # Preflight check moved to server startup (see app/main.py)
@@ -378,7 +337,7 @@ async def process_job(job_id: str, original_resolution: bool):
                 colmap = COLMAPPipeline(job_dir)
 
                 # Step 1: Feature extraction
-                crud.update_job_step(db, job_id, "COLMAP_FEAT", 15)
+                crud.update_job_step(db, product_id, "COLMAP_FEAT", 15)
                 db.commit()
                 log_file.write(">> [COLMAP_FEAT] Extracting features...\n")
                 log_file.flush()
@@ -386,21 +345,21 @@ async def process_job(job_id: str, original_resolution: bool):
                 await colmap.extract_features(log_file)
 
                 # Step 2: Feature matching
-                crud.update_job_step(db, job_id, "COLMAP_MATCH", 30)
+                crud.update_job_step(db, product_id, "COLMAP_MATCH", 30)
                 db.commit()
                 log_file.write(">> [COLMAP_MATCH] Matching features...\n")
                 log_file.flush()
                 await colmap.match_features(log_file)
 
                 # Step 3: Sparse reconstruction
-                crud.update_job_step(db, job_id, "COLMAP_MAP", 45)
+                crud.update_job_step(db, product_id, "COLMAP_MAP", 45)
                 db.commit()
                 log_file.write(">> [COLMAP_MAP] Reconstructing sparse model...\n")
                 log_file.flush()
                 model_path = await colmap.reconstruct(log_file)
 
                 # Step 4: Undistort images
-                crud.update_job_step(db, job_id, "COLMAP_UNDIST", 55)
+                crud.update_job_step(db, product_id, "COLMAP_UNDIST", 55)
                 db.commit()
                 log_file.write(">> [COLMAP_UNDIST] Undistorting images...\n")
                 log_file.flush()
@@ -415,7 +374,7 @@ async def process_job(job_id: str, original_resolution: bool):
                 # Saves 5-10 seconds and disk space
 
                 # Step 5.5: Validate COLMAP reconstruction quality
-                crud.update_job_step(db, job_id, "COLMAP_VALIDATE", 60)
+                crud.update_job_step(db, product_id, "COLMAP_VALIDATE", 60)
                 db.commit()
                 log_file.write(">> [COLMAP_VALIDATE] Validating reconstruction quality...\n")
                 log_file.flush()
@@ -434,7 +393,7 @@ async def process_job(job_id: str, original_resolution: bool):
                 log_file.flush()
 
                 # Step 6: Gaussian Splatting training
-                crud.update_job_step(db, job_id, "GS_TRAIN", 65)
+                crud.update_job_step(db, product_id, "GS_TRAIN", 65)
                 db.commit()
                 log_file.write(">> [GS_TRAIN] Starting Gaussian Splatting training...\n")
                 log_file.flush()
@@ -443,7 +402,7 @@ async def process_job(job_id: str, original_resolution: bool):
                 gs_trainer = GaussianSplattingTrainer(work_dir, output_dir)
 
                 # Get iterations from job record
-                job_record = crud.get_job_by_id(db, job_id)
+                job_record = crud.get_job_by_product_id(db, product_id)
                 iterations = job_record.iterations if job_record else settings.TRAINING_ITERATIONS
 
                 iteration_dir = await gs_trainer.train(log_file, iterations=iterations)
@@ -452,7 +411,7 @@ async def process_job(job_id: str, original_resolution: bool):
                 # Users can judge quality directly in 3D viewer
 
                 # Step 7: Post-processing
-                crud.update_job_step(db, job_id, "EXPORT_PLY", 95)
+                crud.update_job_step(db, product_id, "EXPORT_PLY", 95)
                 db.commit()
                 log_file.write(">> [EXPORT_PLY] Post-processing results...\n")
                 log_file.flush()
@@ -494,31 +453,31 @@ async def process_job(job_id: str, original_resolution: bool):
                     log_file.flush()
 
                 # Update job as completed
-                crud.update_job_status(db, job_id, "COMPLETED")
-                crud.update_job_step(db, job_id, "DONE", 100)
+                crud.update_job_status(db, product_id, "COMPLETED")
+                crud.update_job_step(db, product_id, "DONE", 100)
                 db.commit()
 
                 # Log completion
                 success_msg = f">> [SUCCESS] Job completed! Generated {gaussian_count} Gaussians"
                 log_file.write(success_msg + "\n")
                 log_file.flush()
-                logger.info(f"Job {job_id} completed successfully")
+                logger.info(f"Job {product_id} completed successfully")
 
         except Exception as e:
-            logger.error(f"Job {job_id} failed: {str(e)}")
+            logger.error(f"Job {product_id} failed: {str(e)}")
 
             # Log error to database
             crud.log_error(
-                db, job_id,
+                db, product_id,
                 stage="PIPELINE",
                 error_type=type(e).__name__,
                 error_message=str(e)
             )
             crud.update_job_status(
-                db, job_id, "FAILED",
+                db, product_id, "FAILED",
                 error_message=str(e)
             )
-            crud.update_job_step(db, job_id, "ERROR", 0)
+            crud.update_job_step(db, product_id, "ERROR", 0)
             db.commit()
 
             # Write to log file

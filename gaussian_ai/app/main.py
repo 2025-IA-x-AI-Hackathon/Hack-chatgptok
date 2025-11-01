@@ -103,8 +103,8 @@ async def root():
         "version": "2.0.0",
         "endpoints": {
             "create_job": "POST /recon/jobs",
-            "get_status": "GET /recon/jobs/{job_id}/status",
-            "view_result": "GET /v/{pub_key}"
+            "get_status": "GET /recon/jobs/{product_id}/status",
+            "view_result": "GET /v/{product_id}"
         }
     }
 

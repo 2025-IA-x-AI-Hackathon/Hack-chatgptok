@@ -13,8 +13,7 @@ class Job(Base):
     """Job model for tracking reconstruction tasks"""
     __tablename__ = "jobs"
 
-    job_id = Column(String(8), primary_key=True, index=True)
-    pub_key = Column(String(10), unique=True, index=True, nullable=False)
+    product_id = Column(String(36), primary_key=True, index=True)  # UUID format
     status = Column(String(20), nullable=False, default="PENDING")  # PENDING, PROCESSING, COMPLETED, FAILED
 
     # Step tracking (IMPLEMENT.md 섹션 E)
@@ -27,7 +26,6 @@ class Job(Base):
     completed_at = Column(DateTime, nullable=True)
 
     # Configuration
-    original_resolution = Column(Boolean, default=False)
     image_count = Column(Integer, default=0)
     iterations = Column(Integer, default=10000)
 
@@ -55,15 +53,13 @@ class Job(Base):
     def to_dict(self) -> Dict[str, Any]:
         """Convert model to dictionary"""
         return {
-            "job_id": self.job_id,
-            "pub_key": self.pub_key,
+            "product_id": self.product_id,
             "status": self.status,
             "step": self.step,
             "progress": self.progress,
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "started_at": self.started_at.isoformat() if self.started_at else None,
             "completed_at": self.completed_at.isoformat() if self.completed_at else None,
-            "original_resolution": self.original_resolution,
             "image_count": self.image_count,
             "iterations": self.iterations,
             # Result metrics removed for MVP
@@ -81,7 +77,7 @@ class ErrorLog(Base):
     __tablename__ = "error_logs"
 
     id = Column(Integer, primary_key=True, autoincrement=True)
-    job_id = Column(String(8), index=True, nullable=False)
+    product_id = Column(String(36), index=True, nullable=False)  # UUID format
     timestamp = Column(DateTime, default=datetime.utcnow, nullable=False)
     stage = Column(String(50), nullable=False)
     error_type = Column(String(100), nullable=False)
@@ -92,7 +88,7 @@ class ErrorLog(Base):
         """Convert model to dictionary"""
         return {
             "id": self.id,
-            "job_id": self.job_id,
+            "product_id": self.product_id,
             "timestamp": self.timestamp.isoformat() if self.timestamp else None,
             "stage": self.stage,
             "error_type": self.error_type,
