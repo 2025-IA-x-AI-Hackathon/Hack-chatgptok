@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Auto-Rotate Test - PlayCanvas Viewer</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            color: white;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+
+        .card {
+            background: white;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            transition: transform 0.3s;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+        }
+
+        .viewer-container {
+            position: relative;
+            width: 100%;
+            padding-bottom: 75%; /* 4:3 aspect ratio */
+            background: #000;
+            overflow: hidden;
+        }
+
+        iframe {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+
+        .card-info {
+            padding: 20px;
+        }
+
+        .card-title {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 10px;
+            color: #333;
+        }
+
+        .card-price {
+            font-size: 24px;
+            font-weight: 700;
+            color: #667eea;
+        }
+
+        .controls {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+
+        .controls h2 {
+            margin-bottom: 15px;
+            color: #333;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        button {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: background 0.2s;
+        }
+
+        button:hover {
+            background: #5568d3;
+        }
+
+        button.stop {
+            background: #f44336;
+        }
+
+        button.stop:hover {
+            background: #d32f2f;
+        }
+
+        .status {
+            margin-top: 20px;
+            padding: 15px;
+            background: #f5f5f5;
+            border-radius: 6px;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+        }
+
+        .status-line {
+            margin: 5px 0;
+        }
+
+        .status-line.success {
+            color: #4CAF50;
+        }
+
+        .status-line.error {
+            color: #f44336;
+        }
+
+        .badge {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: rgba(0,0,0,0.7);
+            color: white;
+            padding: 6px 12px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        .instructions {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 30px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+
+        .instructions h2 {
+            color: #333;
+            margin-bottom: 15px;
+        }
+
+        .instructions ul {
+            list-style: none;
+            padding: 0;
+        }
+
+        .instructions li {
+            padding: 8px 0;
+            color: #666;
+        }
+
+        .instructions li:before {
+            content: "✓ ";
+            color: #4CAF50;
+            font-weight: bold;
+            margin-right: 8px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎨 Auto-Rotate Test - PlayCanvas Viewer</h1>
+
+        <div class="instructions">
+            <h2>📖 How to Test</h2>
+            <ul>
+                <li>Hover over any viewer to start auto-rotation</li>
+                <li>Click and drag to manually control (auto-rotate pauses)</li>
+                <li>After 2 seconds of no interaction, auto-rotate resumes</li>
+                <li>Move mouse away to stop rotation</li>
+                <li>Use buttons below for manual control</li>
+            </ul>
+        </div>
+
+        <div class="grid">
+            <!-- Card 1 -->
+            <div class="card" data-card="1">
+                <div class="viewer-container"
+                     onmouseenter="startRotation(1)"
+                     onmouseleave="stopRotation(1)">
+                    <iframe id="viewer1"
+                            src="/viewer/?load=http://kaprpc.iptime.org:5051/recon/pub/GZfdykvEXL/cloud.ply"
+                            allow="xr-spatial-tracking">
+                    </iframe>
+                    <div class="badge" id="badge1">Ready</div>
+                </div>
+                <div class="card-info">
+                    <div class="card-title">3D Scan #1</div>
+                    <div class="card-price">$99.99</div>
+                </div>
+            </div>
+
+            <!-- Card 2 -->
+            <div class="card" data-card="2">
+                <div class="viewer-container"
+                     onmouseenter="startRotation(2)"
+                     onmouseleave="stopRotation(2)">
+                    <iframe id="viewer2"
+                            src="/viewer/?load=http://kaprpc.iptime.org:5051/recon/pub/LC5jVguvOn/cloud.ply"
+                            allow="xr-spatial-tracking">
+                    </iframe>
+                    <div class="badge" id="badge2">Ready</div>
+                </div>
+                <div class="card-info">
+                    <div class="card-title">3D Scan #2</div>
+                    <div class="card-price">$149.99</div>
+                </div>
+            </div>
+
+            <!-- Card 3 -->
+            <div class="card" data-card="3">
+                <div class="viewer-container"
+                     onmouseenter="startRotation(3)"
+                     onmouseleave="stopRotation(3)">
+                    <iframe id="viewer3"
+                            src="/viewer/?load=http://kaprpc.iptime.org:5051/recon/pub/Zw6nXCaYuL/cloud.ply"
+                            allow="xr-spatial-tracking">
+                    </iframe>
+                    <div class="badge" id="badge3">Ready</div>
+                </div>
+                <div class="card-info">
+                    <div class="card-title">3D Scan #3</div>
+                    <div class="card-price">$199.99</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="controls">
+            <h2>🎮 Manual Controls</h2>
+            <div class="button-group">
+                <button onclick="startAll()">▶️ Start All</button>
+                <button onclick="stopAll()" class="stop">⏹️ Stop All</button>
+                <button onclick="testViewer(1)">Test Viewer 1</button>
+                <button onclick="testViewer(2)">Test Viewer 2</button>
+                <button onclick="testViewer(3)">Test Viewer 3</button>
+            </div>
+            <div class="status" id="status">
+                <div class="status-line">Waiting for viewers to load...</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const viewers = {
+            1: { iframe: null, ready: false },
+            2: { iframe: null, ready: false },
+            3: { iframe: null, ready: false }
+        };
+
+        // Initialize iframes
+        document.addEventListener('DOMContentLoaded', function() {
+            viewers[1].iframe = document.getElementById('viewer1');
+            viewers[2].iframe = document.getElementById('viewer2');
+            viewers[3].iframe = document.getElementById('viewer3');
+
+            log('Initializing viewers...');
+        });
+
+        // Listen for autoRotateReady messages
+        window.addEventListener('message', function(event) {
+            const message = event.data;
+
+            if (message.type === 'autoRotateReady') {
+                // Find which viewer sent this message
+                for (let id in viewers) {
+                    const iframe = viewers[id].iframe;
+                    if (iframe && iframe.contentWindow === event.source) {
+                        viewers[id].ready = message.success;
+                        const badge = document.getElementById(`badge${id}`);
+                        if (message.success) {
+                            badge.textContent = '✓ Ready';
+                            badge.style.background = 'rgba(76, 175, 80, 0.9)';
+                            log(`Viewer ${id}: Ready ✓`, 'success');
+                        } else {
+                            badge.textContent = '✗ Error';
+                            badge.style.background = 'rgba(244, 67, 54, 0.9)';
+                            log(`Viewer ${id}: Failed to initialize`, 'error');
+                        }
+                        break;
+                    }
+                }
+            }
+        });
+
+        function startRotation(id) {
+            const viewer = viewers[id];
+            if (!viewer.ready) {
+                log(`Viewer ${id}: Not ready yet`, 'error');
+                return;
+            }
+
+            viewer.iframe.contentWindow.postMessage({
+                action: 'startAutoRotate',
+                speed: 15
+            }, '*');
+
+            const badge = document.getElementById(`badge${id}`);
+            badge.textContent = '🔄 Rotating...';
+            log(`Viewer ${id}: Rotation started`);
+        }
+
+        function stopRotation(id) {
+            const viewer = viewers[id];
+            if (!viewer.ready) return;
+
+            viewer.iframe.contentWindow.postMessage({
+                action: 'stopAutoRotate'
+            }, '*');
+
+            const badge = document.getElementById(`badge${id}`);
+            badge.textContent = '✓ Ready';
+            log(`Viewer ${id}: Rotation stopped`);
+        }
+
+        function startAll() {
+            for (let id in viewers) {
+                startRotation(id);
+            }
+        }
+
+        function stopAll() {
+            for (let id in viewers) {
+                stopRotation(id);
+            }
+        }
+
+        function testViewer(id) {
+            const viewer = viewers[id];
+            if (!viewer.ready) {
+                log(`Viewer ${id}: Not ready`, 'error');
+                return;
+            }
+
+            log(`Viewer ${id}: Testing...`);
+            startRotation(id);
+
+            setTimeout(() => {
+                stopRotation(id);
+                log(`Viewer ${id}: Test complete`);
+            }, 3000);
+        }
+
+        function log(message, type = 'info') {
+            const status = document.getElementById('status');
+            const line = document.createElement('div');
+            line.className = `status-line ${type}`;
+            const time = new Date().toLocaleTimeString();
+            line.textContent = `[${time}] ${message}`;
+            status.appendChild(line);
+            status.scrollTop = status.scrollHeight;
+
+            // Keep only last 10 messages
+            while (status.children.length > 10) {
+                status.removeChild(status.firstChild);
+            }
+        }
+    </script>
+</body>
+</html>
