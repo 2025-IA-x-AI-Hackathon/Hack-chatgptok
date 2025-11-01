@@ -35,7 +35,8 @@
     "multer-s3": "^3.0.1",
     "mysql2": "^3.11.3",
     "swagger-jsdoc": "^6.2.8",
-    "swagger-ui-express": "^5.0.1"
+    "swagger-ui-express": "^5.0.1",
+    "uuid": "^13.0.0"
   },
   "eslintConfig": {
     "extends": "react-app"
