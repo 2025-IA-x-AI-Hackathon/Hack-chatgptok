@@ -1,95 +1,172 @@
-import { PutObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3';
+import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
-import s3Client, { S3_BUCKET_NAME } from '../config/s3.js';
-import multer from 'multer';
-import { v4 as uuidv4 } from 'uuid';
+import path from 'path';
+import crypto from 'crypto';
 
-// Multer 메모리 스토리지 설정 (S3에 직접 업로드하기 위해)
-const storage = multer.memoryStorage();
-
-// 파일 필터 - 이미지만 허용
-const fileFilter = (req, file, cb) => {
-    const allowedMimeTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
-
-    if (allowedMimeTypes.includes(file.mimetype)) {
-        cb(null, true);
-    } else {
-        cb(new Error('Only image files are allowed'), false);
-    }
-};
-
-// Multer 설정
-export const upload = multer({
-    storage: storage,
-    fileFilter: fileFilter,
-    // limits: {
-    //     fileSize: 5 * 1024 * 1024, // 5MB 제한
-    // },
+// S3 클라이언트 초기화
+const s3Client = new S3Client({
+    region: process.env.AWS_REGION,
+    credentials: {
+        accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+        secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+    },
 });
 
-/**
- * 이미지 업로드 및 Pre-signed URL 생성
- */
-const uploadImage = async (req, res) => {
-    try {
-        if (!req.file) {
-            return res.status(400).json({
-                success: false,
-                message: 'No file uploaded',
+const UploadController = {
+    // Pre-signed URL 생성 (단일 파일)
+    async getPresignedUrl(req, res) {
+        try {
+            const memberId = req.user?.memberId;
+            if (!memberId) {
+                return res.status(401).json({ error: 'Unauthorized' });
+            }
+
+            const { filename, contentType } = req.query;
+
+            if (!filename || !contentType) {
+                return res
+                    .status(400)
+                    .json({ error: 'filename and contentType are required' });
+            }
+
+            // 이미지 파일만 허용
+            const allowedTypes = [
+                'image/jpeg',
+                'image/jpg',
+                'image/png',
+                'image/gif',
+                'image/webp',
+                'image/svg+xml',
+            ];
+
+            if (!allowedTypes.includes(contentType)) {
+                return res
+                    .status(400)
+                    .json({ error: 'Only image files are allowed' });
+            }
+
+            // 파일 확장자 추출
+            const ext = path.extname(filename);
+            // 고유한 파일명 생성
+            const uniqueFilename = `${Date.now()}-${crypto.randomBytes(8).toString('hex')}${ext}`;
+            const key = `products/${uniqueFilename}`;
+
+            // Pre-signed URL 생성
+            const command = new PutObjectCommand({
+                Bucket: process.env.AWS_BUCKET_NAME,
+                Key: key,
+                ContentType: contentType,
+                ACL: 'public-read', // 공개 읽기 권한
             });
+
+            const uploadUrl = await getSignedUrl(s3Client, command, {
+                expiresIn: 900, // 15분
+            });
+
+            const fileUrl = `https://${process.env.AWS_BUCKET_NAME}.s3.${process.env.AWS_REGION}.amazonaws.com/${key}`;
+
+            res.status(200).json({
+                uploadUrl,
+                fileUrl,
+                key,
+                expiresIn: 900,
+            });
+        } catch (error) {
+            console.error('Get presigned URL error:', error);
+            res.status(500).json({ error: error.message });
         }
+    },
 
-        // 파일명 생성 (UUID + 원본 확장자)
-        const fileExtension = req.file.originalname.split('.').pop();
-        const fileName = `${uuidv4()}.${fileExtension}`;
-        const s3Key = `images/${fileName}`;
+    // Pre-signed URL 일괄 생성 (여러 파일)
+    async getMultiplePresignedUrls(req, res) {
+        try {
+            const memberId = req.user?.memberId;
+            if (!memberId) {
+                return res.status(401).json({ error: 'Unauthorized' });
+            }
 
-        // S3에 파일 업로드
-        const uploadParams = {
-            Bucket: S3_BUCKET_NAME,
-            Key: s3Key,
-            Body: req.file.buffer,
-            ContentType: req.file.mimetype,
-        };
+            const { files } = req.body; // [{ filename, contentType }]
 
-        const command = new PutObjectCommand(uploadParams);
-        await s3Client.send(command);
+            if (!files || !Array.isArray(files) || files.length === 0) {
+                return res
+                    .status(400)
+                    .json({ error: 'files array is required' });
+            }
 
-        // Pre-signed URL 생성 (7일 유효)
-        const getObjectParams = {
-            Bucket: S3_BUCKET_NAME,
-            Key: s3Key,
-        };
+            if (files.length > 50) {
+                return res
+                    .status(400)
+                    .json({ error: 'Maximum 50 files allowed at once' });
+            }
 
-        const presignedUrl = await getSignedUrl(
-            s3Client,
-            new GetObjectCommand(getObjectParams),
-            { expiresIn: 7 * 24 * 60 * 60 } // 7일
-        );
+            // 이미지 파일만 허용
+            const allowedTypes = [
+                'image/jpeg',
+                'image/jpg',
+                'image/png',
+                'image/gif',
+                'image/webp',
+                'image/svg+xml',
+            ];
 
-        // 공개 URL (버킷이 public이면 이것도 작동)
-        const publicUrl = `https://${S3_BUCKET_NAME}.s3.${process.env.AWS_REGION || 'ap-northeast-2'}.amazonaws.com/${s3Key}`;
+            const uploadData = await Promise.all(
+                files.map(async (file) => {
+                    const { filename, contentType } = file;
 
-        return res.status(200).json({
-            success: true,
-            message: 'Image uploaded successfully',
-            data: {
-                fileName: fileName,
-                s3Key: s3Key,
-                presignedUrl: presignedUrl,
-                publicUrl: publicUrl,
-            },
-        });
-    } catch (error) {
-        console.error('Upload error:', error);
-        return res.status(500).json({
-            success: false,
-            message: 'Failed to upload image',
-            error: error.message,
-        });
-    }
+                    if (!filename || !contentType) {
+                        throw new Error(
+                            'Each file must have filename and contentType',
+                        );
+                    }
+
+                    if (!allowedTypes.includes(contentType)) {
+                        throw new Error(
+                            `Invalid file type: ${contentType}`,
+                        );
+                    }
+
+                    // 파일 확장자 추출
+                    const ext = path.extname(filename);
+                    // 고유한 파일명 생성
+                    const uniqueFilename = `${Date.now()}-${crypto.randomBytes(8).toString('hex')}${ext}`;
+                    const key = `products/${uniqueFilename}`;
+
+                    // Pre-signed URL 생성
+                    const command = new PutObjectCommand({
+                        Bucket: process.env.AWS_BUCKET_NAME,
+                        Key: key,
+                        ContentType: contentType,
+                        ACL: 'public-read',
+                    });
+
+                    const uploadUrl = await getSignedUrl(
+                        s3Client,
+                        command,
+                        {
+                            expiresIn: 900,
+                        },
+                    );
+
+                    const fileUrl = `https://${process.env.AWS_BUCKET_NAME}.s3.${process.env.AWS_REGION}.amazonaws.com/${key}`;
+
+                    return {
+                        originalFilename: filename,
+                        uploadUrl,
+                        fileUrl,
+                        key,
+                    };
+                }),
+            );
+
+            res.status(200).json({
+                uploads: uploadData,
+                expiresIn: 900,
+            });
+        } catch (error) {
+            console.error('Get multiple presigned URLs error:', error);
+            res.status(500).json({ error: error.message });
+        }
+    },
 };
 
-export default {
-    uploadImage,
-};
+export default UploadController;
