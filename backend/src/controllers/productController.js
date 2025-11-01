@@ -5,20 +5,25 @@ import { pool } from '../middleware/dbConnection.js';
 const ProductController = {
     // 상품 등록
     async createProduct(req, res) {
+        console.log('[Product] 상품 등록 요청 시작 - memberId:', req.user?.memberId);
         const connection = await pool.getConnection();
         try {
             const memberId = req.user?.memberId;
             if (!memberId) {
+                console.log('[Product] 상품 등록 실패 - 인증되지 않은 사용자');
                 return res.status(401).json({ error: 'Unauthorized' });
             }
 
             const { name, price, description, imageUrls } = req.body;
+            console.log('[Product] 상품 정보:', { name, price, imageCount: imageUrls?.length || 0 });
 
             if (!name || !price) {
+                console.log('[Product] 상품 등록 실패 - 필수 항목 누락');
                 return res.status(400).json({ error: 'Name and price are required' });
             }
 
             await connection.beginTransaction();
+            console.log('[Product] 트랜잭션 시작');
 
             // 1. 상품 생성
             const productId = await ProductModel.createProductWithConnection(connection, {
@@ -27,10 +32,12 @@ const ProductController = {
                 price,
                 description,
             });
+            console.log('[Product] 상품 생성 완료 - productId:', productId);
 
             // 2. 이미지 추가
             if (imageUrls && imageUrls.length > 0) {
                 await ProductModel.addProductImagesWithConnection(connection, productId, imageUrls);
+                console.log('[Product] 이미지 추가 완료 - 개수:', imageUrls.length);
             }
 
             // 3. AI 상품 설명 자동 생성 큐 등록
@@ -46,6 +53,7 @@ const ProductController = {
 
             // 트랜잭션 커밋 (모든 작업 완료)
             await connection.commit();
+            console.log('[Product] 트랜잭션 커밋 완료 - productId:', productId);
 
             res.status(201).json({
                 message: 'Product created successfully',
@@ -53,7 +61,7 @@ const ProductController = {
             });
         } catch (error) {
             await connection.rollback();
-            console.error('Create product error:', error);
+            console.error('[Product] 상품 등록 에러 (롤백):', error);
             res.status(500).json({ error: error.message });
         } finally {
             connection.release();
@@ -62,9 +70,9 @@ const ProductController = {
 
     // 상품 목록 조회
     async getProductList(req, res) {
+        const { page = 1, limit = 20, status = 'ACTIVE', search = '' } = req.query;
+        console.log('[Product] 상품 목록 조회 - page:', page, 'limit:', limit, 'status:', status, 'search:', search);
         try {
-            const { page = 1, limit = 20, status = 'ACTIVE', search = '' } = req.query;
-
             const result = await ProductModel.getProductList({
                 page: parseInt(page),
                 limit: parseInt(limit),
@@ -72,99 +80,114 @@ const ProductController = {
                 search,
             });
 
+            console.log('[Product] 상품 목록 조회 완료 - 결과 개수:', result.products?.length || 0);
             res.status(200).json(result);
         } catch (error) {
-            console.error('Get product list error:', error);
+            console.error('[Product] 상품 목록 조회 에러:', error);
             res.status(500).json({ error: error.message });
         }
     },
 
     // 상품 상세 조회
     async getProductById(req, res) {
+        const { productId } = req.params;
+        console.log('[Product] 상품 상세 조회 - productId:', productId);
         try {
-            const { productId } = req.params;
-
             if (!productId) {
+                console.log('[Product] 상품 조회 실패 - productId 누락');
                 return res.status(400).json({ error: 'Product ID is required' });
             }
 
             const product = await ProductModel.getProductById(productId);
 
             if (!product) {
+                console.log('[Product] 상품 조회 실패 - 상품 없음, productId:', productId);
                 return res.status(404).json({ error: 'Product not found' });
             }
 
+            console.log('[Product] 상품 조회 성공 - productId:', productId, 'name:', product.name);
+
             // 조회수 증가 (비동기로 처리하고 응답에는 영향 안주기)
             ProductModel.increaseViewCount(productId).catch((err) =>
-                console.error('Failed to increase view count:', err)
+                console.error('[Product] 조회수 증가 실패:', err)
             );
 
             res.status(200).json(product);
         } catch (error) {
-            console.error('Get product by ID error:', error);
+            console.error('[Product] 상품 조회 에러:', error);
             res.status(500).json({ error: error.message });
         }
     },
 
     // 상품 수정
     async updateProduct(req, res) {
+        const { productId } = req.params;
+        console.log('[Product] 상품 수정 요청 - productId:', productId, 'memberId:', req.user?.memberId);
         try {
             const memberId = req.user?.memberId;
             if (!memberId) {
+                console.log('[Product] 상품 수정 실패 - 인증되지 않은 사용자');
                 return res.status(401).json({ error: 'Unauthorized' });
             }
 
-            const { productId } = req.params;
             const updates = req.body;
 
             if (!productId) {
+                console.log('[Product] 상품 수정 실패 - productId 누락');
                 return res.status(400).json({ error: 'Product ID is required' });
             }
 
             // 소유자 확인
             const isOwner = await ProductModel.isProductOwner(productId, memberId);
             if (!isOwner) {
+                console.log('[Product] 상품 수정 실패 - 권한 없음, productId:', productId, 'memberId:', memberId);
                 return res.status(403).json({ error: 'Forbidden: Not the product owner' });
             }
 
             const updated = await ProductModel.updateProduct(productId, updates);
 
             if (!updated) {
+                console.log('[Product] 상품 수정 실패 - 상품 없음 또는 변경사항 없음, productId:', productId);
                 return res.status(404).json({ error: 'Product not found or no changes made' });
             }
 
+            console.log('[Product] 상품 수정 성공 - productId:', productId);
             res.status(200).json({ message: 'Product updated successfully' });
         } catch (error) {
-            console.error('Update product error:', error);
+            console.error('[Product] 상품 수정 에러:', error);
             res.status(500).json({ error: error.message });
         }
     },
 
     // 상품 삭제
     async deleteProduct(req, res) {
+        const { productId } = req.params;
+        console.log('[Product] 상품 삭제 요청 - productId:', productId, 'memberId:', req.user?.memberId);
         try {
             const memberId = req.user?.memberId;
             if (!memberId) {
+                console.log('[Product] 상품 삭제 실패 - 인증되지 않은 사용자');
                 return res.status(401).json({ error: 'Unauthorized' });
             }
 
-            const { productId } = req.params;
-
             if (!productId) {
+                console.log('[Product] 상품 삭제 실패 - productId 누락');
                 return res.status(400).json({ error: 'Product ID is required' });
             }
 
             const deleted = await ProductModel.deleteProduct(productId, memberId);
 
             if (!deleted) {
+                console.log('[Product] 상품 삭제 실패 - 상품 없음/판매완료/권한없음, productId:', productId);
                 return res.status(404).json({
                     error: 'Product not found, already sold, or not authorized',
                 });
             }
 
+            console.log('[Product] 상품 삭제 성공 - productId:', productId);
             res.status(200).json({ message: 'Product deleted successfully' });
         } catch (error) {
-            console.error('Delete product error:', error);
+            console.error('[Product] 상품 삭제 에러:', error);
             res.status(500).json({ error: error.message });
         }
     },
@@ -190,21 +213,24 @@ const ProductController = {
 
     // 상품 좋아요 추가
     async likeProduct(req, res) {
+        const { productId } = req.params;
+        console.log('[Product] 좋아요 추가 요청 - productId:', productId, 'memberId:', req.user?.memberId);
         try {
             const memberId = req.user?.memberId;
             if (!memberId) {
+                console.log('[Product] 좋아요 추가 실패 - 인증되지 않은 사용자');
                 return res.status(401).json({ error: 'Unauthorized' });
             }
 
-            const { productId } = req.params;
-
             if (!productId) {
+                console.log('[Product] 좋아요 추가 실패 - productId 누락');
                 return res.status(400).json({ error: 'Product ID is required' });
             }
 
             // 상품 존재 확인
             const product = await ProductModel.getProductById(productId);
             if (!product) {
+                console.log('[Product] 좋아요 추가 실패 - 상품 없음, productId:', productId);
                 return res.status(404).json({ error: 'Product not found' });
             }
 
@@ -213,35 +239,41 @@ const ProductController = {
 
             if (!result.success) {
                 if (result.reason === 'already_liked') {
+                    console.log('[Product] 좋아요 추가 실패 - 이미 좋아요함, productId:', productId);
                     return res.status(400).json({ error: 'Already liked this product' });
                 }
+                console.log('[Product] 좋아요 추가 실패 - reason:', result.reason);
                 return res.status(400).json({ error: 'Failed to like product' });
             }
 
+            console.log('[Product] 좋아요 추가 성공 - productId:', productId);
             res.status(200).json({ message: 'Product liked successfully' });
         } catch (error) {
-            console.error('Like product error:', error);
+            console.error('[Product] 좋아요 추가 에러:', error);
             res.status(500).json({ error: error.message });
         }
     },
 
     // 상품 좋아요 취소
     async unlikeProduct(req, res) {
+        const { productId } = req.params;
+        console.log('[Product] 좋아요 취소 요청 - productId:', productId, 'memberId:', req.user?.memberId);
         try {
             const memberId = req.user?.memberId;
             if (!memberId) {
+                console.log('[Product] 좋아요 취소 실패 - 인증되지 않은 사용자');
                 return res.status(401).json({ error: 'Unauthorized' });
             }
 
-            const { productId } = req.params;
-
             if (!productId) {
+                console.log('[Product] 좋아요 취소 실패 - productId 누락');
                 return res.status(400).json({ error: 'Product ID is required' });
             }
 
             // 상품 존재 확인
             const product = await ProductModel.getProductById(productId);
             if (!product) {
+                console.log('[Product] 좋아요 취소 실패 - 상품 없음, productId:', productId);
                 return res.status(404).json({ error: 'Product not found' });
             }
 
@@ -250,14 +282,17 @@ const ProductController = {
 
             if (!result.success) {
                 if (result.reason === 'not_liked') {
+                    console.log('[Product] 좋아요 취소 실패 - 좋아요 안했음, productId:', productId);
                     return res.status(400).json({ error: 'Product not liked yet' });
                 }
+                console.log('[Product] 좋아요 취소 실패 - reason:', result.reason);
                 return res.status(400).json({ error: 'Failed to unlike product' });
             }
 
+            console.log('[Product] 좋아요 취소 성공 - productId:', productId);
             res.status(200).json({ message: 'Product unliked successfully' });
         } catch (error) {
-            console.error('Unlike product error:', error);
+            console.error('[Product] 좋아요 취소 에러:', error);
             res.status(500).json({ error: error.message });
         }
     },

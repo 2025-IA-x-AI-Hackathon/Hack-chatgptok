@@ -31,8 +31,10 @@ export const upload = multer({
  * 이미지 업로드 및 Pre-signed URL 생성
  */
 const uploadImage = async (req, res) => {
+    console.log('[Upload] 이미지 업로드 요청 시작 - originalname:', req.file?.originalname);
     try {
         if (!req.file) {
+            console.log('[Upload] 이미지 업로드 실패 - 파일 없음');
             return res.status(400).json({
                 success: false,
                 message: 'No file uploaded',
@@ -44,6 +46,8 @@ const uploadImage = async (req, res) => {
         const fileName = `${uuidv4()}.${fileExtension}`;
         const s3Key = `images/${fileName}`;
 
+        console.log('[Upload] S3 업로드 시작 - s3Key:', s3Key, 'size:', req.file.size, 'mimetype:', req.file.mimetype);
+
         // S3에 파일 업로드
         const uploadParams = {
             Bucket: S3_BUCKET_NAME,
@@ -54,6 +58,8 @@ const uploadImage = async (req, res) => {
 
         const command = new PutObjectCommand(uploadParams);
         await s3Client.send(command);
+
+        console.log('[Upload] S3 업로드 완료 - s3Key:', s3Key);
 
         // Pre-signed URL 생성 (7일 유효)
         const getObjectParams = {
@@ -70,6 +76,7 @@ const uploadImage = async (req, res) => {
         // 공개 URL (버킷이 public이면 이것도 작동)
         const publicUrl = `https://${S3_BUCKET_NAME}.s3.${process.env.AWS_REGION || 'ap-northeast-2'}.amazonaws.com/${s3Key}`;
 
+        console.log('[Upload] 이미지 업로드 성공 - fileName:', fileName);
         return res.status(200).json({
             success: true,
             message: 'Image uploaded successfully',
@@ -81,7 +88,7 @@ const uploadImage = async (req, res) => {
             },
         });
     } catch (error) {
-        console.error('Upload error:', error);
+        console.error('[Upload] 이미지 업로드 에러:', error);
         return res.status(500).json({
             success: false,
             message: 'Failed to upload image',
