@@ -13,6 +13,20 @@ export default function NewProductPage() {
     const [location, setLocation] = useState("");
     const [images, setImages] = useState<string[]>([]);
 
+    // 가격 입력 핸들러 - 숫자만 입력받고 천 단위 콤마 추가
+    const handlePriceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const value = e.target.value;
+        // 숫자만 추출
+        const numbers = value.replace(/[^0-9]/g, '');
+        // 천 단위 콤마 추가
+        if (numbers) {
+            const formatted = Number(numbers).toLocaleString('ko-KR');
+            setPrice(formatted);
+        } else {
+            setPrice('');
+        }
+    };
+
     const handleImageAdd = () => {
         // 실제로는 파일 업로드를 처리해야 하지만, 데모용으로 placeholder 이미지 추가
         const colors = ["e2e8f0/64748b", "dbeafe/3b82f6", "f3e8ff/a855f7", "fef3c7/f59e0b"];
@@ -134,12 +148,11 @@ export default function NewProductPage() {
                     <label className="block text-sm font-medium mb-2">가격</label>
                     <div className="flex items-center gap-2">
                         <input
-                            type="number"
+                            type="text"
                             value={price}
-                            onChange={(e) => setPrice(e.target.value)}
+                            onChange={handlePriceChange}
                             placeholder="0"
                             className="flex-1 px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-                            min="0"
                         />
                         <span className="text-sm font-medium">원</span>
                     </div>

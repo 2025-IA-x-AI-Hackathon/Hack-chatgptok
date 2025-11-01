@@ -278,12 +278,26 @@ export default function EditProductPage() {
     useEffect(() => {
         if (product) {
             setTitle(product.title);
-            setPrice(product.price.toString());
+            setPrice(product.price.toLocaleString('ko-KR'));
             setDescription(product.description);
             setLocation(product.location);
             setImages(product.images);
         }
     }, [product]);
+
+    // 가격 입력 핸들러 - 숫자만 입력받고 천 단위 콤마 추가
+    const handlePriceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const value = e.target.value;
+        // 숫자만 추출
+        const numbers = value.replace(/[^0-9]/g, '');
+        // 천 단위 콤마 추가
+        if (numbers) {
+            const formatted = Number(numbers).toLocaleString('ko-KR');
+            setPrice(formatted);
+        } else {
+            setPrice('');
+        }
+    };
 
     const handleImageAdd = () => {
         if (images.length >= 10) return;
@@ -421,12 +435,11 @@ export default function EditProductPage() {
                     <label className="block text-sm font-medium mb-2">가격</label>
                     <div className="flex items-center gap-2">
                         <input
-                            type="number"
+                            type="text"
                             value={price}
-                            onChange={(e) => setPrice(e.target.value)}
+                            onChange={handlePriceChange}
                             placeholder="0"
                             className="flex-1 px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-                            min="0"
                         />
                         <span className="text-sm font-medium">원</span>
                     </div>
