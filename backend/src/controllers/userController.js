@@ -3,7 +3,7 @@ import UserModel from '../models/userModel.js';
 const UserController = {
     // 내 정보 조회
     async getMe(req, res) {
-        console.log('[User] 내 정보 조회 요청 - 내 ID:', req.user?.userId);
+        console.log('[User] 내 정보 조회 요청 - 내 ID:', req.user?.memberId);
         try {
             // TODO: 구현 필요
             res.status(501).json({ error: 'Not implemented yet' });
