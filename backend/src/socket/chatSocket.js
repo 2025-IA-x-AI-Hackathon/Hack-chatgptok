@@ -1,5 +1,6 @@
 import ChatModel from '../models/chatModel.js';
 import jwt from 'jsonwebtoken';
+import { sendNotification } from './notificationSocket.js';
 
 /**
  * Socket.IO 인증 미들웨어
@@ -102,6 +103,23 @@ export const setupChatSocket = (io) => {
 
                 // 채팅방의 모든 사용자에게 메시지 브로드캐스트 (자신 포함)
                 io.to(`room:${chatRoomId}`).emit('new-message', messageWithSender);
+
+                // 채팅방 정보 조회하여 상대방에게 알림 전송
+                const chatRoom = await ChatModel.getChatRoomById(chatRoomId, socket.memberId);
+                if (chatRoom) {
+                    // 상대방 ID 결정
+                    const receiverId = chatRoom.other_user_id;
+                    const senderName = socket.user.nickname || '사용자';
+                    const productName = chatRoom.product_name || '상품';
+
+                    // 알림 전송 (상대방에게만)
+                    await sendNotification(io, receiverId, {
+                        type: 'CHAT_MESSAGE',
+                        product_id: chatRoom.product_id,
+                        title: '새 메시지가 도착했습니다',
+                        message: `${senderName}님이 "${productName}" 채팅에서 메시지를 보냈습니다`
+                    });
+                }
 
                 console.log(`메시지 전송: 사용자 ${socket.memberId} -> 채팅방 ${chatRoomId}`);
             } catch (error) {

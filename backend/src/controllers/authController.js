@@ -1,5 +1,6 @@
 import UserModel from '../models/userModel.js';
 import { generateAccessToken, generateRefreshToken, verifyToken } from '../utils/jwtUtil.js';
+import { getPresignedUrl } from '../config/s3.js';
 
 const authController = {
     // 회원가입
@@ -45,7 +46,7 @@ const authController = {
                 });
             }
 
-            // 사용자 생성
+            // 사용자 생성 (img는 S3 key로 저장)
             const newUser = await UserModel.createUser({
                 email,
                 password,
@@ -64,12 +65,23 @@ const authController = {
                 memberId: newUser.member_id,
             });
 
+            // img를 presigned URL로 변환
+            let imgUrl = null;
+            if (newUser.img) {
+                try {
+                    imgUrl = await getPresignedUrl(newUser.img);
+                } catch (error) {
+                    console.error('[Auth] Presigned URL 생성 실패 - s3_key:', newUser.img, error);
+                    imgUrl = null;
+                }
+            }
+
             // 비밀번호 제외하고 응답
             const userResponse = {
                 member_id: newUser.member_id,
                 email: newUser.email,
                 nickname: newUser.nickname,
-                img: newUser.img,
+                img_url: imgUrl,
                 created_at: newUser.created_at,
             };
 
@@ -137,12 +149,23 @@ const authController = {
                 memberId: user.member_id,
             });
 
+            // img를 presigned URL로 변환
+            let imgUrl = null;
+            if (user.img) {
+                try {
+                    imgUrl = await getPresignedUrl(user.img);
+                } catch (error) {
+                    console.error('[Auth] Presigned URL 생성 실패 - s3_key:', user.img, error);
+                    imgUrl = null;
+                }
+            }
+
             // 비밀번호 제외하고 응답
             const userResponse = {
                 member_id: user.member_id,
                 email: user.email,
                 nickname: user.nickname,
-                img: user.img,
+                img_url: imgUrl,
                 created_at: user.created_at,
             };
 
