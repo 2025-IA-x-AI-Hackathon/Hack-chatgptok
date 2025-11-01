@@ -311,35 +311,35 @@ export default function ProductDetailPage() {
     }
 
     return (
-        <div className="min-h-screen pb-24 bg-gradient-to-br from-background via-primary/3 to-background">
+        <div className="min-h-screen pb-20">
             {/* 헤더 */}
-            <div className="fixed top-0 left-0 right-0 z-50 glass-strong shadow-lg">
-                <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
+            <div className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-sm border-b">
+                <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
                     <button
                         onClick={() => router.push("/")}
-                        className="p-2.5 hover:bg-primary/10 rounded-xl transition-all duration-200 hover:scale-105 active:scale-95"
+                        className="p-2 hover:bg-accent rounded-lg transition-colors"
                     >
                         <ChevronLeft className="w-6 h-6" />
                     </button>
                     <div className="flex items-center gap-2">
-                        <button className="p-2.5 hover:bg-primary/10 rounded-xl transition-all duration-200 hover:scale-105 active:scale-95">
+                        <button className="p-2 hover:bg-accent rounded-lg transition-colors">
                             <Share2 className="w-5 h-5" />
                         </button>
-                        <button className="p-2.5 hover:bg-primary/10 rounded-xl transition-all duration-200 hover:scale-105 active:scale-95">
+                        <button className="p-2 hover:bg-accent rounded-lg transition-colors">
                             <MoreVertical className="w-5 h-5" />
                         </button>
                     </div>
                 </div>
             </div>
 
-            <div className="pt-16 max-w-7xl mx-auto animate-fade-in">
+            <div className="pt-14 max-w-7xl mx-auto">
                 {/* 상품 이미지 갤러리 */}
-                <div className="relative group">
+                <div className="relative">
                     <Carousel setApi={setCarouselApi} className="w-full">
                         <CarouselContent>
                             {product.images.map((image, index) => (
                                 <CarouselItem key={index}>
-                                    <div className="relative aspect-square bg-gradient-to-br from-muted via-primary/5 to-muted/50">
+                                    <div className="relative aspect-square bg-muted">
                                         <Image
                                             src={image}
                                             alt={`${product.title} - 이미지 ${index + 1}`}
@@ -357,17 +357,17 @@ export default function ProductDetailPage() {
 
                     {/* 이미지 카운터 뱃지 (우측 하단) */}
                     {product.images.length > 1 && (
-                        <div className="absolute bottom-5 right-5 bg-black/80 text-white text-sm px-5 py-2.5 rounded-2xl backdrop-blur-xl shadow-2xl font-semibold border border-white/10">
+                        <div className="absolute bottom-4 right-4 bg-black/60 text-white text-sm px-3 py-1.5 rounded-full backdrop-blur-sm">
                             {currentImageIndex + 1} / {product.images.length}
                         </div>
                     )}
                 </div>
 
                 {/* 판매자 정보 */}
-                <div className="p-6 border-b bg-card/70 backdrop-blur-sm animate-slide-up shadow-sm">
+                <div className="p-4 border-b">
                     <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-4">
-                            <div className="relative w-16 h-16 rounded-2xl overflow-hidden bg-gradient-to-br from-primary/30 to-primary/10 ring-2 ring-primary/20 shadow-lg">
+                        <div className="flex items-center gap-3">
+                            <div className="relative w-12 h-12 rounded-full overflow-hidden bg-muted">
                                 <Image
                                     src={product.seller.profileImage}
                                     alt={product.seller.name}
@@ -377,9 +377,8 @@ export default function ProductDetailPage() {
                                 />
                             </div>
                             <div>
-                                <p className="font-bold text-lg mb-1">{product.seller.name}</p>
-                                <p className="text-sm text-muted-foreground flex items-center gap-1.5">
-                                    <MapPin className="w-4 h-4 text-primary" />
+                                <p className="font-medium">{product.seller.name}</p>
+                                <p className="text-sm text-muted-foreground">
                                     {product.seller.location}
                                 </p>
                             </div>
@@ -388,7 +387,7 @@ export default function ProductDetailPage() {
                         <div className="flex items-center gap-2">
                             <button
                                 onClick={() => router.push(`/products/${productId}/edit`)}
-                                className="flex items-center gap-2 px-5 py-2.5 text-sm border-2 border-border/50 rounded-xl hover:bg-primary/10 hover:border-primary/50 hover:scale-105 active:scale-95 transition-all duration-200 font-semibold"
+                                className="flex items-center gap-2 px-3 py-2 text-sm border rounded-lg hover:bg-accent transition-colors"
                             >
                                 <Pencil className="w-4 h-4" />
                                 수정
@@ -400,7 +399,7 @@ export default function ProductDetailPage() {
                                         router.push("/");
                                     }
                                 }}
-                                className="flex items-center gap-2 px-5 py-2.5 text-sm border-2 border-destructive/30 text-destructive rounded-xl hover:bg-destructive/15 hover:border-destructive/50 hover:scale-105 active:scale-95 transition-all duration-200 font-semibold"
+                                className="flex items-center gap-2 px-3 py-2 text-sm border border-destructive text-destructive rounded-lg hover:bg-destructive/10 transition-colors"
                             >
                                 <Trash2 className="w-4 h-4" />
                                 삭제
@@ -410,61 +409,57 @@ export default function ProductDetailPage() {
                 </div>
 
                 {/* 상품 정보 */}
-                <div className="p-6 border-b bg-card/50 backdrop-blur-sm animate-slide-up shadow-sm" style={{animationDelay: "0.1s"}}>
-                    <h1 className="text-3xl font-bold mb-4 leading-tight">{product.title}</h1>
-                    <p className="text-4xl font-bold mb-6 gradient-text">
-                        {formatPrice(product.price)}
-                    </p>
-                    <div className="flex items-center gap-3 text-sm flex-wrap">
-                        <div className="flex items-center gap-2 px-4 py-2 bg-muted/70 rounded-xl border border-border/50 shadow-sm">
-                            <Clock className="w-4 h-4 text-primary" />
-                            <span className="font-semibold">{product.createdAt}</span>
+                <div className="p-4 border-b">
+                    <h1 className="text-xl font-bold mb-2">{product.title}</h1>
+                    <p className="text-2xl font-bold mb-4">{formatPrice(product.price)}</p>
+                    <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                        <div className="flex items-center gap-1">
+                            <Clock className="w-4 h-4" />
+                            <span>{product.createdAt}</span>
                         </div>
-                        <div className="flex items-center gap-2 px-4 py-2 bg-muted/70 rounded-xl border border-border/50 shadow-sm">
-                            <Eye className="w-4 h-4 text-primary" />
-                            <span className="font-semibold">{product.views}</span>
+                        <div className="flex items-center gap-1">
+                            <Eye className="w-4 h-4" />
+                            <span>{product.views}</span>
                         </div>
-                        <div className="flex items-center gap-2 px-4 py-2 bg-gradient-to-br from-rose-50 to-rose-100 dark:from-rose-950/30 dark:to-rose-900/30 text-rose-600 dark:text-rose-400 rounded-xl border border-rose-200 dark:border-rose-800 shadow-sm">
-                            <Heart className="w-4 h-4 fill-current" />
-                            <span className="font-semibold">{product.likes}</span>
+                        <div className="flex items-center gap-1">
+                            <Heart className="w-4 h-4" />
+                            <span>{product.likes}</span>
                         </div>
                     </div>
                 </div>
 
                 {/* 상품 설명 */}
-                <div className="p-6 border-b bg-card/50 backdrop-blur-sm animate-slide-up shadow-sm" style={{animationDelay: "0.2s"}}>
-                    <h3 className="font-bold text-xl mb-4 gradient-text">상품 설명</h3>
-                    <p className="whitespace-pre-line text-base leading-relaxed text-foreground/80">
+                <div className="p-4 border-b">
+                    <p className="whitespace-pre-line text-sm leading-relaxed">
                         {product.description}
                     </p>
                 </div>
 
                 {/* 거래 지역 */}
-                <div className="p-6 border-b bg-card/50 backdrop-blur-sm animate-slide-up shadow-sm" style={{animationDelay: "0.3s"}}>
-                    <h3 className="font-bold text-xl mb-4 gradient-text">거래 지역</h3>
-                    <div className="flex items-center gap-3 text-base px-5 py-4 bg-gradient-to-br from-primary/10 to-primary/5 rounded-2xl border-2 border-primary/20 shadow-md">
-                        <MapPin className="w-6 h-6 text-primary" />
-                        <span className="font-semibold">{product.location}</span>
+                <div className="p-4 border-b">
+                    <div className="flex items-center gap-2 text-sm">
+                        <MapPin className="w-4 h-4 text-muted-foreground" />
+                        <span>{product.location}</span>
                     </div>
                 </div>
             </div>
 
             {/* 하단 고정 버튼 */}
-            <div className="fixed bottom-0 left-0 right-0 glass-strong shadow-2xl animate-slide-up">
-                <div className="max-w-7xl mx-auto px-5 py-5 flex items-center gap-4">
+            <div className="fixed bottom-0 left-0 right-0 bg-background border-t">
+                <div className="max-w-7xl mx-auto px-4 py-3 flex items-center gap-3">
                     <button
                         onClick={() => setIsLiked(!isLiked)}
-                        className={`p-4 rounded-2xl border-2 transition-all duration-300 shadow-lg ${
+                        className={`p-3 rounded-lg border transition-colors ${
                             isLiked
-                                ? "bg-gradient-to-br from-rose-50 to-rose-100 dark:from-rose-950/40 dark:to-rose-900/40 border-rose-400 dark:border-rose-600 text-rose-500 scale-110 shadow-rose-200 dark:shadow-rose-900"
-                                : "border-border hover:bg-primary/10 hover:border-primary/30 hover:scale-105 active:scale-95"
+                                ? "bg-rose-50 border-rose-200 text-rose-500"
+                                : "hover:bg-accent"
                         }`}
                     >
                         <Heart
-                            className={`w-7 h-7 transition-all duration-300 ${isLiked ? "fill-current scale-110 animate-bounce-in" : ""}`}
+                            className={`w-6 h-6 ${isLiked ? "fill-current" : ""}`}
                         />
                     </button>
-                    <button className="flex-1 gradient-primary text-white py-5 rounded-2xl font-bold hover:shadow-2xl hover:shadow-primary/50 hover:scale-[1.02] active:scale-[0.98] transition-all duration-300 text-lg btn-shimmer">
+                    <button className="flex-1 bg-primary text-primary-foreground py-3 rounded-lg font-medium hover:bg-primary/90 transition-colors">
                         채팅하기
                     </button>
                 </div>
