@@ -74,9 +74,9 @@ const ProductModel = {
 
         const product = products[0];
 
-        // 상품 이미지 목록 조회
+        // 상품 이미지 목록 조회 (s3_key 포함)
         const [images] = await pool.query(
-            'SELECT * FROM product_image WHERE product_id = ? ORDER BY sort_order',
+            'SELECT product_image_id, product_id, s3_key, sort_order, created_at FROM product_image WHERE product_id = ? ORDER BY sort_order',
             [productId]
         );
 
@@ -140,21 +140,21 @@ const ProductModel = {
     },
 
     // 상품 이미지 추가 (트랜잭션 기반 - connection 전달받음)
-    async addProductImagesWithConnection(connection, productId, imageUrls) {
-        if (!imageUrls || imageUrls.length === 0) {
+    async addProductImagesWithConnection(connection, productId, images) {
+        if (!images || images.length === 0) {
             return;
         }
 
         const now = new Date();
-        const values = imageUrls.map((url, index) => [
+        const values = images.map((key, index) => [
             productId,
-            url,
+            key,
             index,
             now,
         ]);
 
         const query = `
-            INSERT INTO product_image (product_id, s3_url, sort_order, created_at)
+            INSERT INTO product_image (product_id, s3_key, sort_order, created_at)
             VALUES ?
         `;
 

@@ -1,6 +1,8 @@
 import ProductModel from '../models/productModel.js';
 import JobModel from '../models/jobModel.js';
 import { pool } from '../middleware/dbConnection.js';
+import { uploadProductImages } from '../middleware/uploadMiddleware.js';
+import { getPresignedUrl } from '../config/s3.js';
 
 const ProductController = {
     // 상품 등록
@@ -14,8 +16,8 @@ const ProductController = {
                 return res.status(401).json({ error: 'Unauthorized' });
             }
 
-            const { name, price, description, imageUrls } = req.body;
-            console.log('[Product] 상품 정보:', { name, price, imageCount: imageUrls?.length || 0 });
+            const { name, price, description, images } = req.body;
+            console.log('[Product] 상품 정보:', { name, price, imageCount: images?.length || 0 });
 
             if (!name || !price) {
                 console.log('[Product] 상품 등록 실패 - 필수 항목 누락');
@@ -23,7 +25,7 @@ const ProductController = {
             }
 
             // 이미지 URL 확인
-            if (!imageUrls || !Array.isArray(imageUrls) || imageUrls.length === 0) {
+            if (!images || !Array.isArray(images) || images.length === 0) {
                 return res.status(400).json({ error: 'At least one image URL is required' });
             }
 
@@ -40,7 +42,7 @@ const ProductController = {
             console.log('[Product] 상품 생성 완료 - productId:', productId);
 
             // 2. 이미지 URL DB 저장
-            await ProductModel.addProductImagesWithConnection(connection, productId, imageUrls);
+            await ProductModel.addProductImagesWithConnection(connection, productId, images);
 
             // 3. AI 상품 설명 자동 생성 큐 등록
             // await JobModel.createDescriptionJobWithConnection(connection, productId);
@@ -60,7 +62,7 @@ const ProductController = {
             res.status(201).json({
                 message: 'Product created successfully',
                 productId,
-                imageUrls,
+                images,
             });
         } catch (error) {
             await connection.rollback();
@@ -109,6 +111,40 @@ const ProductController = {
             }
 
             console.log('[Product] 상품 조회 성공 - productId:', productId, 'name:', product.name);
+
+            // seller_img를 presigned URL로 변환
+            if (product.seller_img) {
+                try {
+                    product.seller_img_url = await getPresignedUrl(product.seller_img);
+                } catch (error) {
+                    console.error('[Product] Seller 이미지 Presigned URL 생성 실패 - s3_key:', product.seller_img, error);
+                    product.seller_img_url = null;
+                }
+            }
+
+            // s3_key를 presigned URL로 변환
+            if (product.images && product.images.length > 0) {
+                const imageUrlPromises = product.images.map(async (image) => {
+                    if (image.s3_key) {
+                        try {
+                            const presignedUrl = await getPresignedUrl(image.s3_key);
+                            return {
+                                ...image,
+                                url: presignedUrl,
+                            };
+                        } catch (error) {
+                            console.error('[Product] Presigned URL 생성 실패 - s3_key:', image.s3_key, error);
+                            return {
+                                ...image,
+                                url: null,
+                            };
+                        }
+                    }
+                    return image;
+                });
+
+                product.images = await Promise.all(imageUrlPromises);
+            }
 
             // 조회수 증가 (비동기로 처리하고 응답에는 영향 안주기)
             ProductModel.increaseViewCount(productId).catch((err) =>
