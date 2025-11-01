@@ -412,10 +412,10 @@ router.post('/products/:productId/like', isAuthenticated, productController.like
  */
 router.delete('/products/:productId/like', isAuthenticated, productController.unlikeProduct);
 
+// AI description generation route
+router.post('/products/ai/generate-description', productController.generateDescription);
+
 // TODO: 추가 기능 라우트
-// - AI 상품 설명 자동 생성
-// - 3DGS 작업 관리
-// - 좋아요 기능
 // - 채팅 기능
 // - 알림 기능
 
