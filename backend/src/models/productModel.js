@@ -76,7 +76,7 @@ const ProductModel = {
 
         // 상품 이미지 목록 조회 (s3_key 포함)
         const [images] = await pool.query(
-            'SELECT product_image_id, product_id, s3_key, sort_order, created_at FROM product_image WHERE product_id = ? ORDER BY sort_order',
+            'SELECT image_id, product_id, s3_key, sort_order, created_at FROM product_image WHERE product_id = ? ORDER BY sort_order',
             [productId]
         );
 
