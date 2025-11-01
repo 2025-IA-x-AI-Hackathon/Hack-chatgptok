@@ -25,7 +25,13 @@ app.use(
 
 // 미들웨어 적용
 app.use(helmetMiddleware);
-app.use(cspMiddleware);
+// Swagger UI 경로에서는 CSP 비활성화 (해커톤용)
+app.use((req, res, next) => {
+    if (req.path.startsWith('/docs')) {
+        return next();
+    }
+    cspMiddleware(req, res, next);
+});
 app.use(rateLimitMiddleware);
 app.use(
     '/public',
