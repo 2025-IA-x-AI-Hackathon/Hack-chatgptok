@@ -11,6 +11,7 @@ import {
     CarouselItem,
     type CarouselApi,
 } from "@/components/ui/carousel";
+import { toast } from "sonner";
 
 interface Product {
     id: number;
@@ -394,7 +395,7 @@ export default function ProductDetailPage() {
                             <button
                                 onClick={() => {
                                     if (confirm("정말 삭제하시겠습니까?")) {
-                                        alert("삭제 기능은 백엔드 연동 후 구현됩니다.");
+                                        toast.info("삭제 기능은 백엔드 연동 후 구현됩니다.");
                                         router.push("/");
                                     }
                                 }}

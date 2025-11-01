@@ -4,6 +4,7 @@ import { ChevronLeft, ImagePlus, X } from "lucide-react";
 import Image from "next/image";
 import { useParams, useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
+import { toast } from "sonner";
 
 interface Product {
     id: number;
@@ -316,17 +317,17 @@ export default function EditProductPage() {
         e.preventDefault();
 
         if (!title || !price || !description || !location) {
-            alert("모든 필드를 입력해주세요.");
+            toast.error("모든 필드를 입력해주세요.");
             return;
         }
 
         if (images.length === 0) {
-            alert("최소 1개의 이미지를 추가해주세요.");
+            toast.error("최소 1개의 이미지를 추가해주세요.");
             return;
         }
 
         // 여기서 실제로는 서버에 데이터를 전송해야 합니다
-        alert("상품이 수정되었습니다!");
+        toast.success("상품이 수정되었습니다!");
         router.push(`/products/${productId}`);
     };
 
