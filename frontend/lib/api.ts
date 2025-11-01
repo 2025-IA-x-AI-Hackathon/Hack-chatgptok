@@ -329,7 +329,7 @@ export const authApi = {
      * 회원가입
      */
     signup: async (data: RegisterRequest): Promise<ApiResponse<AuthResponse>> => {
-        return apiRequest<AuthResponse>("/auth/signup", {
+        return apiRequest<AuthResponse>("/auth/register", {
             method: "POST",
             body: JSON.stringify(data),
         });
