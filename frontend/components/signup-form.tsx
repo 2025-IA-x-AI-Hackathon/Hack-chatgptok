@@ -1,6 +1,6 @@
 "use client"
 
-import { LogIn } from "lucide-react"
+import { UserPlus } from "lucide-react"
 import Link from "next/link"
 
 import { cn } from "@/lib/utils"
@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
 
-export function LoginForm({
+export function SignupForm({
   className,
   ...props
 }: React.ComponentProps<"div">) {
@@ -24,16 +24,26 @@ export function LoginForm({
           <FieldGroup>
             <div className="flex flex-col items-center gap-3 text-center mb-8">
               <div className="flex size-16 items-center justify-center rounded-2xl gradient-primary shadow-lg">
-                <LogIn className="size-8 text-white" />
+                <UserPlus className="size-8 text-white" />
               </div>
-              <h1 className="text-3xl font-bold gradient-text">로그인</h1>
+              <h1 className="text-3xl font-bold gradient-text">회원가입</h1>
               <FieldDescription className="text-base">
-                계정이 없으신가요?{" "}
-                <Link href="/signup" className="text-primary font-semibold hover:underline">
-                  회원가입
+                이미 계정이 있으신가요?{" "}
+                <Link href="/login" className="text-primary font-semibold hover:underline">
+                  로그인
                 </Link>
               </FieldDescription>
             </div>
+            <Field>
+              <FieldLabel htmlFor="name" className="text-base font-semibold">이름</FieldLabel>
+              <Input
+                id="name"
+                type="text"
+                placeholder="홍길동"
+                required
+                className="h-12 text-base rounded-xl border-border/50 focus:border-primary/50 transition-colors"
+              />
+            </Field>
             <Field>
               <FieldLabel htmlFor="email" className="text-base font-semibold">이메일</FieldLabel>
               <Input
@@ -54,12 +64,22 @@ export function LoginForm({
                 className="h-12 text-base rounded-xl border-border/50 focus:border-primary/50 transition-colors"
               />
             </Field>
+            <Field>
+              <FieldLabel htmlFor="password-confirm" className="text-base font-semibold">비밀번호 확인</FieldLabel>
+              <Input
+                id="password-confirm"
+                type="password"
+                placeholder="••••••••"
+                required
+                className="h-12 text-base rounded-xl border-border/50 focus:border-primary/50 transition-colors"
+              />
+            </Field>
             <Field className="pt-4">
               <Button
                 type="submit"
                 className="w-full h-12 text-base font-semibold gradient-primary hover:shadow-lg hover:shadow-primary/30 transition-all duration-300"
               >
-                로그인
+                가입하기
               </Button>
             </Field>
           </FieldGroup>
