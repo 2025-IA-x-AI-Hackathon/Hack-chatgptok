@@ -58,8 +58,20 @@ export interface Product {
     thumbnail: string | null;
 }
 
+export interface ProductImage {
+    image_id: number;
+    url: string;
+    created_at: string;
+}
+
 export interface ProductDetail extends Product {
-    images?: string[];
+    images: ProductImage[];
+    seller_email: string;
+    seller_created_at: string;
+}
+
+export interface ProductDetailResponse {
+    product: ProductDetail;
 }
 
 export interface ProductListResponse {
@@ -68,7 +80,7 @@ export interface ProductListResponse {
         total: number;
         page: number;
         limit: number;
-        total_pages: number;
+        totalPages: number;
     };
 }
 

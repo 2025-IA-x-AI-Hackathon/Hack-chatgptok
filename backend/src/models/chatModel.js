@@ -66,7 +66,7 @@ const ChatModel = {
                 cr.updated_at,
                 p.name as product_name,
                 p.price as product_price,
-                (SELECT s3_url FROM product_image WHERE product_id = p.product_id ORDER BY sort_order LIMIT 1) as product_thumbnail,
+                (SELECT s3_key FROM product_image WHERE product_id = p.product_id ORDER BY sort_order LIMIT 1) as product_thumbnail,
                 CASE
                     WHEN cr.buyer_id = ? THEN seller.nickname
                     ELSE buyer.nickname
@@ -110,7 +110,7 @@ const ChatModel = {
                 cr.updated_at,
                 p.name as product_name,
                 p.price as product_price,
-                (SELECT s3_url FROM product_image WHERE product_id = p.product_id ORDER BY sort_order LIMIT 1) as product_thumbnail,
+                (SELECT s3_key FROM product_image WHERE product_id = p.product_id ORDER BY sort_order LIMIT 1) as product_thumbnail,
                 CASE
                     WHEN cr.buyer_id = ? THEN seller.nickname
                     ELSE buyer.nickname

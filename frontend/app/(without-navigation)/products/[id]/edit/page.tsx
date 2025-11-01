@@ -378,7 +378,7 @@ export default function EditProductPage() {
     useEffect(() => {
         if (product) {
             reset({
-                name: product.title,
+                name: product.name,
                 price: product.price.toLocaleString('ko-KR'),
                 description: product.description,
                 imageUrls: product.images,

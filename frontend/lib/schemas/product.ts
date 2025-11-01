@@ -21,8 +21,8 @@ export const productFormSchema = z.object({
     .max(2000, "설명은 최대 2000자까지 입력 가능합니다"),
   imageUrls: z
     .array(z.string())
-    .min(1, "최소 1개의 이미지를 추가해주세요")
-    .max(10, "최대 10개까지 이미지를 추가할 수 있습니다"),
+    .min(3, "최소 3개의 이미지를 추가해주세요")
+    .max(50, "최대 50개까지 이미지를 추가할 수 있습니다"),
   imageKeys: z.array(z.string()), // S3 업로드된 이미지 URL들
 })
 

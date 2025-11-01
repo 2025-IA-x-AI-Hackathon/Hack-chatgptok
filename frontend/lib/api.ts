@@ -21,6 +21,7 @@ import type {
     Product,
     ProductListResponse,
     ProductDetail,
+    ProductDetailResponse,
     CreateProductRequest,
     UpdateProductRequest,
     LoginRequest,
@@ -46,11 +47,11 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8
 // ============ 헬퍼 함수 ============
 
 /**
- * 로컬 스토리지에서 액세스 토큰 가져오기
+ * 세션 스토리지에서 액세스 토큰 가져오기
  */
 function getAccessToken(): string | null {
     if (typeof window === "undefined") return null;
-    return localStorage.getItem("accessToken");
+    return sessionStorage.getItem("accessToken");
 }
 
 /**
@@ -58,7 +59,7 @@ function getAccessToken(): string | null {
  */
 function setAccessToken(token: string): void {
     if (typeof window === "undefined") return;
-    localStorage.setItem("accessToken", token);
+    sessionStorage.setItem("accessToken", token);
     // 쿠키에도 저장 (middleware에서 사용)
     document.cookie = `accessToken=${token}; path=/; max-age=${60 * 60 * 24 * 7}`; // 7일
 }
@@ -68,7 +69,7 @@ function setAccessToken(token: string): void {
  */
 function getRefreshToken(): string | null {
     if (typeof window === "undefined") return null;
-    return localStorage.getItem("refreshToken");
+    return sessionStorage.getItem("refreshToken");
 }
 
 /**
@@ -76,7 +77,7 @@ function getRefreshToken(): string | null {
  */
 function setRefreshToken(token: string): void {
     if (typeof window === "undefined") return;
-    localStorage.setItem("refreshToken", token);
+    sessionStorage.setItem("refreshToken", token);
     // 쿠키에도 저장 (middleware에서 사용)
     document.cookie = `refreshToken=${token}; path=/; max-age=${60 * 60 * 24 * 30}`; // 30일
 }
@@ -84,10 +85,10 @@ function setRefreshToken(token: string): void {
 /**
  * 토큰 제거 (로그아웃 시)
  */
-function clearTokens(): void {
+export function clearTokens(): void {
     if (typeof window === "undefined") return;
-    localStorage.removeItem("accessToken");
-    localStorage.removeItem("refreshToken");
+    sessionStorage.removeItem("accessToken");
+    sessionStorage.removeItem("refreshToken");
     // 쿠키에서도 제거
     document.cookie = "accessToken=; path=/; max-age=0";
     document.cookie = "refreshToken=; path=/; max-age=0";
@@ -204,36 +205,23 @@ export const productApi = {
     /**
      * 상품 상세 조회
      */
-    getProduct: async (id: string): Promise<ApiResponse<ProductDetail>> => {
-        return apiRequest<ProductDetail>(`/products/${id}`, { method: "GET" });
+    getProduct: async (id: string): Promise<ApiResponse<ProductDetailResponse>> => {
+        return apiRequest<ProductDetailResponse>(`/products/${id}`, { method: "GET" });
     },
 
     /**
      * 상품 등록
      */
-    createProduct: async (
+     createProduct: async (
         data: CreateProductRequest
     ): Promise<ApiResponse<ProductDetail>> => {
-        // FormData 사용 (이미지 업로드)
-        const formData = new FormData();
-        formData.append("name", data.name);
-        formData.append("price", data.price.toString());
-        if (data.description) {
-            formData.append("description", data.description);
-        }
-
-        // 이미지 파일들 추가
-        data.images.forEach((image, index) => {
-            formData.append("images", image);
-        });
-
         return apiRequest<ProductDetail>(
             "/products",
             {
                 method: "POST",
-                body: formData,
-                headers: {}, // FormData는 Content-Type을 자동 설정
-            }
+                body: JSON.stringify(data),
+            },
+            true // 인증 필요
         );
     },
 
@@ -341,7 +329,7 @@ export const authApi = {
      * 회원가입
      */
     signup: async (data: RegisterRequest): Promise<ApiResponse<AuthResponse>> => {
-        return apiRequest<AuthResponse>("/auth/signup", {
+        return apiRequest<AuthResponse>("/auth/register", {
             method: "POST",
             body: JSON.stringify(data),
         });
@@ -351,12 +339,26 @@ export const authApi = {
      * 로그아웃
      */
     logout: async (): Promise<ApiResponse<{ message: string }>> => {
-        return apiRequest<{ message: string }>(
+        const response = await apiRequest<{ message: string }>(
             "/auth/logout",
             {
                 method: "POST",
-            }
+            },
+            true // 인증 필요
         );
+
+        // 로그아웃 성공 시 토큰 제거
+        if (response.success) {
+            clearTokens();
+        }
+
+        return response;
+    },
+
+    getMe: async (): Promise<ApiResponse<{ user: User }>> => {
+        return apiRequest<{ user: User }>("/auth/me", {
+            method: "GET",
+        }, true); // 인증 필요
     },
 };
 
@@ -366,8 +368,8 @@ export const userApi = {
     /**
      * 프로필 조회
      */
-    getProfile: async (): Promise<ApiResponse<User>> => {
-        return apiRequest<User>("/users/profile", { method: "GET" });
+    getProfile: async (): Promise<ApiResponse<{ user: User }>> => {
+        return apiRequest<{ user: User }>("/users/me", { method: "GET" }, true);
     },
 
     /**
@@ -506,7 +508,7 @@ export const uploadApi = {
                     };
                 }
 
-                uploadedKeys.push(uploadInfo.fileUrl);
+                uploadedKeys.push(uploadInfo.key);
             }
 
             return {
@@ -569,6 +571,99 @@ export const uploadApi = {
     },
 };
 
+export const chatApi = {
+    /**
+     * 채팅방 생성 또는 조회
+     */
+    createOrGetChatRoom: async (
+        data: CreateChatRoomRequest
+    ): Promise<ApiResponse<{ data: ChatRoom }>> => {
+        return apiRequest<{ data: ChatRoom }>(
+            "/chat/rooms",
+            {
+                method: "POST",
+                body: JSON.stringify(data),
+            },
+            true
+        );
+    },
+
+    /**
+     * 채팅방 목록 조회
+     */
+    getChatRooms: async (): Promise<ApiResponse<ChatRoom[]>> => {
+        return apiRequest<ChatRoom[]>(
+            "/chat/rooms",
+            {
+                method: "GET",
+            },true
+        );
+    },
+
+    /**
+     * 채팅방 상세 조회
+     */
+    getChatRoomDetail: async (
+        chatRoomId: string
+    ): Promise<ApiResponse<ChatRoomDetail>> => {
+        return apiRequest<ChatRoomDetail>(
+            `/chat/rooms/${chatRoomId}`,
+            {
+                method: "GET",
+            },
+            true
+        );
+    },
+
+    /**
+     * 메시지 목록 조회
+     */
+    getMessages: async (
+        chatRoomId: string
+    ): Promise<ApiResponse<ChatMessage[]>> => {
+        return apiRequest<ChatMessage[]>(
+            `/chat/rooms/${chatRoomId}/messages`,
+            {
+                method: "GET",
+            },
+            true
+        );
+    },
+
+    /**
+     * 메시지 전송
+     */
+    sendMessage: async (
+        chatRoomId: string,
+        data: SendMessageRequest
+    ): Promise<ApiResponse<{ data: ChatMessage }>> => {
+        return apiRequest<{ data: ChatMessage }>(
+            `/chat/rooms/${chatRoomId}/messages`,
+            {
+                method: "POST",
+                body: JSON.stringify(data),
+            },
+            true
+        );
+    },
+
+    /**
+     * 메시지 읽음 처리
+     */
+    markAsRead: async (
+        chatRoomId: string
+    ): Promise<ApiResponse<{ data: { count: number } }>> => {
+        return apiRequest<{ data: { count: number } }>(
+            `/chat/rooms/${chatRoomId}/read`,
+            {
+                method: "POST",
+            },
+            true
+        );
+    },
+};
+
+
 // ============ 기본 export ============
 
 export default {
@@ -578,4 +673,5 @@ export default {
     auth: authApi,
     user: userApi,
     upload: uploadApi,
+    chat: chatApi
 };

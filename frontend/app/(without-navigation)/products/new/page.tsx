@@ -66,8 +66,8 @@ export default function NewProductPage() {
     };
 
     const handleImageAdd = () => {
-        if (imageFiles.length >= 10) {
-            toast.error("최대 10개까지 이미지를 추가할 수 있습니다.");
+        if (imageFiles.length >= 50) {
+            toast.error("최대 50개까지 이미지를 추가할 수 있습니다.");
             return;
         }
         fileInputRef.current?.click();
@@ -76,8 +76,8 @@ export default function NewProductPage() {
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const files = Array.from(e.target.files || []);
 
-        if (imageFiles.length + files.length > 10) {
-            toast.error("최대 10개까지 이미지를 추가할 수 있습니다.");
+        if (imageFiles.length + files.length > 50) {
+            toast.error("최대 50개까지 이미지를 추가할 수 있습니다.");
             return;
         }
 
@@ -213,14 +213,14 @@ export default function NewProductPage() {
                 {/* 이미지 업로드 */}
                 <div className="p-4 border-b">
                     <label className="block text-sm font-medium mb-3">
-                        상품 이미지 ({imageFiles.length}/10)
+                        상품 이미지 ({imageFiles.length}/50)
                     </label>
                     {errors.imageUrls && (
                         <p className="text-xs text-red-600 mb-2">{errors.imageUrls.message}</p>
                     )}
                     <div className="flex gap-3 overflow-x-auto pb-2">
                         {/* 이미지 추가 버튼 */}
-                        {imageFiles.length < 10 && (
+                        {imageFiles.length < 50 && (
                             <button
                                 type="button"
                                 onClick={handleImageAdd}
@@ -262,7 +262,7 @@ export default function NewProductPage() {
                         ))}
                     </div>
                     <p className="text-xs text-muted-foreground mt-2">
-                        첫 번째 이미지가 대표 이미지로 사용됩니다.
+                        첫 번째 이미지가 대표 이미지로 사용됩니다. (최소 3장, 최대 50장)
                     </p>
                 </div>
 

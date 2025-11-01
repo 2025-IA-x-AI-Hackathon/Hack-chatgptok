@@ -23,7 +23,17 @@ export function LoginForm() {
   const loginMutation = useMutation({
     mutationFn: (data: LoginFormData) => authApi.login(data),
     onSuccess: (response) => {
-      if (response.success) {
+      if (response.success && response.data) {
+        // 쿠키에 accessToken 저장 (7일 유효)
+        document.cookie = `accessToken=${response.data.accessToken}; path=/; max-age=${60 * 60 * 24 * 7}; SameSite=Strict`
+
+        // localStorage에도 저장
+        localStorage.setItem("accessToken", response.data.accessToken)
+        if (response.data.refreshToken) {
+          localStorage.setItem("refreshToken", response.data.refreshToken)
+          document.cookie = `refreshToken=${response.data.refreshToken}; path=/; max-age=${60 * 60 * 24 * 30}; SameSite=Strict`
+        }
+
         toast.success("로그인 성공!")
         // redirect 파라미터 확인
         const searchParams = new URLSearchParams(window.location.search)

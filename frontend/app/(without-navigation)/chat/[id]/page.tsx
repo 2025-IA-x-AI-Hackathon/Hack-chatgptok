@@ -72,8 +72,8 @@ export default function ChatRoom({
 
         // 채팅방 정보 가져오기
         const roomResponse = await chatApi.getChatRoomDetail(chatRoomId)
-        if (roomResponse.success && roomResponse.data?.data) {
-          setChatRoom(roomResponse.data.data)
+        if (roomResponse.success && roomResponse.data) {
+          setChatRoom(roomResponse.data)
         } else {
           setError(roomResponse.error?.message || '채팅방을 불러오는데 실패했습니다.')
           return
@@ -81,8 +81,8 @@ export default function ChatRoom({
 
         // 메시지 목록 가져오기
         const messagesResponse = await chatApi.getMessages(chatRoomId)
-        if (messagesResponse.success && messagesResponse.data?.data) {
-          setMessages(messagesResponse.data.data)
+        if (messagesResponse.success && messagesResponse.data) {
+          setMessages(messagesResponse.data)
         } else {
           setError(messagesResponse.error?.message || '메시지를 불러오는데 실패했습니다.')
         }
