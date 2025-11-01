@@ -25,8 +25,11 @@ export function LoginForm() {
     onSuccess: (response) => {
       if (response.success) {
         toast.success("로그인 성공!")
-        // 로그인 성공 시 메인 페이지로 이동
-        router.push("/")
+        // redirect 파라미터 확인
+        const searchParams = new URLSearchParams(window.location.search)
+        const redirect = searchParams.get("redirect")
+        // 이전 페이지로 이동하거나 메인 페이지로 이동
+        router.push(redirect || "/")
       } else {
         toast.error(response.error?.message || "로그인에 실패했습니다")
       }

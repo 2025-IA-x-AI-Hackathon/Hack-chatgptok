@@ -49,11 +49,13 @@ function getAccessToken(): string | null {
 }
 
 /**
- * 로컬 스토리지에 액세스 토큰 저장
+ * 로컬 스토리지와 쿠키에 액세스 토큰 저장
  */
 function setAccessToken(token: string): void {
     if (typeof window === "undefined") return;
     localStorage.setItem("accessToken", token);
+    // 쿠키에도 저장 (middleware에서 사용)
+    document.cookie = `accessToken=${token}; path=/; max-age=${60 * 60 * 24 * 7}`; // 7일
 }
 
 /**
@@ -65,11 +67,13 @@ function getRefreshToken(): string | null {
 }
 
 /**
- * 로컬 스토리지에 리프레시 토큰 저장
+ * 로컬 스토리지와 쿠키에 리프레시 토큰 저장
  */
 function setRefreshToken(token: string): void {
     if (typeof window === "undefined") return;
     localStorage.setItem("refreshToken", token);
+    // 쿠키에도 저장 (middleware에서 사용)
+    document.cookie = `refreshToken=${token}; path=/; max-age=${60 * 60 * 24 * 30}`; // 30일
 }
 
 /**
@@ -79,6 +83,9 @@ function clearTokens(): void {
     if (typeof window === "undefined") return;
     localStorage.removeItem("accessToken");
     localStorage.removeItem("refreshToken");
+    // 쿠키에서도 제거
+    document.cookie = "accessToken=; path=/; max-age=0";
+    document.cookie = "refreshToken=; path=/; max-age=0";
 }
 
 /**

@@ -81,8 +81,8 @@ export interface LoginRequest {
 export interface RegisterRequest {
     email: string;
     password: string;
-    name: string;
-    location: string;
+    nickname: string;
+    img?: string;
 }
 
 export interface AuthResponse {

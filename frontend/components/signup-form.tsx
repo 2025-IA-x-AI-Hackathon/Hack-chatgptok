@@ -2,7 +2,12 @@
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
+import { useForm } from "react-hook-form"
+import { zodResolver } from "@hookform/resolvers/zod"
+import { useMutation } from "@tanstack/react-query"
 import { toast } from "sonner"
+import { signupSchema, type SignupFormData } from "@/lib/schemas/auth"
+import { authApi } from "@/lib/api"
 
 export function SignupForm() {
   const router = useRouter()
@@ -10,9 +15,10 @@ export function SignupForm() {
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [passwordConfirm, setPasswordConfirm] = useState("")
-  const [isLoading, setIsLoading] = useState(false)
+  const [nickname, setNickname] = useState("")
+  const [img, setImg] = useState("")
 
-  const totalSteps = 2
+  const totalSteps = 3
   const progress = (step / totalSteps) * 100
 
   const handleEmailSubmit = (e: React.FormEvent) => {
@@ -22,7 +28,7 @@ export function SignupForm() {
     }
   }
 
-  const handlePasswordSubmit = async (e: React.FormEvent) => {
+  const handlePasswordSubmit = (e: React.FormEvent) => {
     e.preventDefault()
 
     if (password !== passwordConfirm) {
@@ -30,19 +36,35 @@ export function SignupForm() {
       return
     }
 
-    setIsLoading(true)
+    setStep(3)
+  }
 
-    // TODO: 실제 회원가입 API 호출 로직 구현
-    try {
-      console.log("Signup attempt:", { email, password })
+  const signupMutation = useMutation({
+    mutationFn: (data: { email: string; password: string; nickname: string; img?: string }) =>
+      authApi.register(data),
+    onSuccess: (response) => {
+      if (response.success) {
+        toast.success("회원가입 성공!")
+        router.push("/")
+      } else {
+        toast.error(response.error?.message || "회원가입에 실패했습니다")
+      }
+    },
+    onError: (error) => {
+      console.error("Signup error:", error)
+      toast.error("회원가입 중 오류가 발생했습니다")
+    },
+  })
 
-      // 성공 시 로그인 페이지로 이동
-      // router.push("/login")
-    } catch (error) {
-      console.error("Signup failed:", error)
-    } finally {
-      setIsLoading(false)
-    }
+  const handleSignupSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+
+    signupMutation.mutate({
+      email,
+      password,
+      nickname,
+      img: img || undefined,
+    })
   }
 
   const handleBack = () => {
@@ -169,10 +191,70 @@ export function SignupForm() {
               </button>
               <button
                 type="submit"
-                disabled={isLoading}
+                className="flex-1 bg-primary text-white font-semibold py-3 rounded-lg hover:bg-primary/90 transition-colors"
+              >
+                다음
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {/* Step 3: 닉네임 및 프로필 이미지 입력 */}
+      {step === 3 && (
+        <div>
+          <h1 className="text-2xl font-bold text-center mb-2">
+            프로필 설정
+          </h1>
+          <p className="text-center text-gray-600 mb-8">
+            닉네임과 프로필 이미지를 입력해주세요
+          </p>
+
+          <form onSubmit={handleSignupSubmit} className="space-y-5">
+            <div>
+              <label htmlFor="nickname" className="block text-sm font-medium mb-2">
+                닉네임
+              </label>
+              <input
+                id="nickname"
+                type="text"
+                value={nickname}
+                onChange={(e) => setNickname(e.target.value)}
+                required
+                autoFocus
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all"
+                placeholder="닉네임을 입력하세요"
+              />
+            </div>
+
+            <div>
+              <label htmlFor="img" className="block text-sm font-medium mb-2">
+                프로필 이미지 URL (선택사항)
+              </label>
+              <input
+                id="img"
+                type="text"
+                value={img}
+                onChange={(e) => setImg(e.target.value)}
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all"
+                placeholder="이미지 URL을 입력하세요"
+              />
+            </div>
+
+            <div className="flex gap-3 mt-8">
+              <button
+                type="button"
+                onClick={handleBack}
+                className="flex-1 bg-transparent text-gray-700 font-semibold py-3 rounded-lg border-2 border-gray-300 hover:bg-gray-50 transition-colors"
+              >
+                이전
+              </button>
+              <button
+                type="submit"
+                disabled={signupMutation.isPending}
                 className="flex-1 bg-primary text-white font-semibold py-3 rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {isLoading ? "가입 중..." : "가입하기"}
+                {signupMutation.isPending ? "가입 중..." : "가입하기"}
               </button>
             </div>
           </form>
