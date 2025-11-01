@@ -884,7 +884,7 @@ router.get('/products/:productId', productController.getProductById);
  *             required:
  *               - name
  *               - price
- *               - imageUrls
+ *               - images
  *             properties:
  *               name:
  *                 type: string
@@ -895,7 +895,7 @@ router.get('/products/:productId', productController.getProductById);
  *               price:
  *                 type: integer
  *                 example: 50000
- *               imageUrls:
+ *               images:
  *                 type: array
  *                 description: S3에 업로드된 이미지 URL 배열 (최소 1개, 최대 50개)
  *                 minItems: 1
@@ -924,7 +924,7 @@ router.get('/products/:productId', productController.getProductById);
  *                       type: string
  *                       format: uuid
  *                       example: 550e8400-e29b-41d4-a716-446655440000
- *                     imageUrls:
+ *                     images:
  *                       type: array
  *                       items:
  *                         type: string

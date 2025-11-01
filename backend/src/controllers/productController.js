@@ -31,7 +31,7 @@ const ProductController = {
             }
 
             // 이미지 URL 확인
-            if (!imageUrls || !Array.isArray(imageUrls) || imageUrls.length === 0) {
+            if (!images || !Array.isArray(images) || images.length === 0) {
                 console.log('[Product] 상품 등록 실패 - 이미지 URL 누락');
                 return res.status(400).json({
                     success: false,
