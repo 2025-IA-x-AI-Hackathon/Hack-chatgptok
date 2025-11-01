@@ -1,7 +1,6 @@
 import ProductModel from '../models/productModel.js';
 import JobModel from '../models/jobModel.js';
 import { pool } from '../middleware/dbConnection.js';
-import { uploadProductImages } from '../middleware/uploadMiddleware.js';
 import { getPresignedUrl } from '../config/s3.js';
 
 const ProductController = {
@@ -55,15 +54,10 @@ const ProductController = {
             await ProductModel.addProductImagesWithConnection(connection, productId, images);
 
             // 3. AI 상품 설명 자동 생성 큐 등록
-            // await JobModel.createDescriptionJobWithConnection(connection, productId);
+            await JobModel.createDescriptionJobWithConnection(connection, productId, name, images);
 
             // 4. 3DGS 작업 큐 등록
-            // await JobModel.create3DGSJobWithConnection(connection, productId);
-
-            // 5. 외부 API 호출 (트랜잭션 내부)
-            // 외부 API 호출 실패시 전체 트랜잭션 롤백
-            // await JobModel.notifyWorker('description', productId);
-            // await JobModel.notifyWorker('3dgs', productId);
+            await JobModel.create3DGSJobWithConnection(connection, productId, images);
 
             // 트랜잭션 커밋 (모든 작업 완료)
             await connection.commit();
