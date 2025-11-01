@@ -4,7 +4,13 @@ import { Heart, Share2, MoreVertical, MapPin, Eye, Clock, ChevronLeft, Pencil, T
 import Image from "next/image";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import {
+    Carousel,
+    CarouselContent,
+    CarouselItem,
+    type CarouselApi,
+} from "@/components/ui/carousel";
 
 interface Product {
     id: number;
@@ -276,7 +282,18 @@ export default function ProductDetailPage() {
     const product = productsDetail[productId];
 
     const [isLiked, setIsLiked] = useState(false);
+    const [carouselApi, setCarouselApi] = useState<CarouselApi>();
     const [currentImageIndex, setCurrentImageIndex] = useState(0);
+
+    useEffect(() => {
+        if (!carouselApi) {
+            return;
+        }
+
+        carouselApi.on("select", () => {
+            setCurrentImageIndex(carouselApi.selectedScrollSnap());
+        });
+    }, [carouselApi]);
 
     if (!product) {
         return (
@@ -316,30 +333,31 @@ export default function ProductDetailPage() {
 
             <div className="pt-14 max-w-7xl mx-auto">
                 {/* 상품 이미지 갤러리 */}
-                <div className="relative aspect-square bg-muted">
-                    <Image
-                        src={product.images[currentImageIndex]}
-                        alt={product.title}
-                        fill
-                        className="object-cover"
-                        sizes="100vw"
-                        priority
-                        unoptimized
-                    />
-                    {/* 이미지 인디케이터 */}
-                    {product.images.length > 1 && (
-                        <div className="absolute bottom-4 left-0 right-0 flex justify-center gap-1">
-                            {product.images.map((_, index) => (
-                                <button
-                                    key={index}
-                                    onClick={() => setCurrentImageIndex(index)}
-                                    className={`w-2 h-2 rounded-full transition-all ${
-                                        index === currentImageIndex
-                                            ? "bg-white w-6"
-                                            : "bg-white/50"
-                                    }`}
-                                />
+                <div className="relative">
+                    <Carousel setApi={setCarouselApi} className="w-full">
+                        <CarouselContent>
+                            {product.images.map((image, index) => (
+                                <CarouselItem key={index}>
+                                    <div className="relative aspect-square bg-muted">
+                                        <Image
+                                            src={image}
+                                            alt={`${product.title} - 이미지 ${index + 1}`}
+                                            fill
+                                            className="object-cover"
+                                            sizes="100vw"
+                                            priority={index === 0}
+                                            unoptimized
+                                        />
+                                    </div>
+                                </CarouselItem>
                             ))}
+                        </CarouselContent>
+                    </Carousel>
+
+                    {/* 이미지 카운터 뱃지 (우측 하단) */}
+                    {product.images.length > 1 && (
+                        <div className="absolute bottom-4 right-4 bg-black/60 text-white text-sm px-3 py-1.5 rounded-full backdrop-blur-sm">
+                            {currentImageIndex + 1} / {product.images.length}
                         </div>
                     )}
                 </div>
