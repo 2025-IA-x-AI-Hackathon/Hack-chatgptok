@@ -211,29 +211,16 @@ export const productApi = {
     /**
      * 상품 등록
      */
-    createProduct: async (
+     createProduct: async (
         data: CreateProductRequest
     ): Promise<ApiResponse<ProductDetail>> => {
-        // FormData 사용 (이미지 업로드)
-        const formData = new FormData();
-        formData.append("name", data.name);
-        formData.append("price", data.price.toString());
-        if (data.description) {
-            formData.append("description", data.description);
-        }
-
-        // 이미지 파일들 추가
-        data.images.forEach((image, index) => {
-            formData.append("images", image);
-        });
-
         return apiRequest<ProductDetail>(
             "/products",
             {
                 method: "POST",
-                body: formData,
-                headers: {}, // FormData는 Content-Type을 자동 설정
-            }
+                body: JSON.stringify(data),
+            },
+            true // 인증 필요
         );
     },
 
