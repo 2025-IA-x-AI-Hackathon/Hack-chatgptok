@@ -1,3 +1,5 @@
+import logger from '../utils/logger.js';
+
 export const isValidPassword = (req, res, next) => {
     let password;
 
@@ -9,7 +11,7 @@ export const isValidPassword = (req, res, next) => {
     }
 
     // 디버깅을 위한 로그
-    console.log('Password received:', password);
+    logger.debug('Password received', { hasPassword: !!password });
 
     if (!password) {
         return res.status(400).json({ message: '비밀번호를 입력해주세요.' });

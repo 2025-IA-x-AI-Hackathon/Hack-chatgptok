@@ -1,6 +1,7 @@
 import { S3Client, GetObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import dotenv from 'dotenv';
+import logger from '../utils/logger.js';
 
 dotenv.config();
 
@@ -30,7 +31,7 @@ export async function getPresignedUrl(s3Key, expiresIn = 3600) {
         const presignedUrl = await getSignedUrl(s3Client, command, { expiresIn });
         return presignedUrl;
     } catch (error) {
-        console.error('Presigned URL 생성 실패:', error);
+        logger.error('Presigned URL 생성 실패', error, { s3Key, expiresIn });
         throw error;
     }
 }

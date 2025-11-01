@@ -1,7 +1,6 @@
 import mysql from 'mysql2/promise';
 import dotenv from 'dotenv';
-import colors from 'colors';
-import moment from 'moment';
+import logger from '../utils/logger.js';
 
 dotenv.config();
 
@@ -16,28 +15,17 @@ const pool = mysql.createPool({
 });
 
 /**
- * 쿼리 로깅 함수
+ * 쿼리 로깅 함수 (실행 시간 포함)
  * @param {string} query - 실행된 SQL 쿼리
  * @param {Array} params - 쿼리에 사용된 파라미터
  * @param {Object|Array} result - 쿼리 결과
+ * @param {bigint} startTime - 쿼리 시작 시간 (process.hrtime.bigint())
  */
-const logQuery = (query, params, result) => {
-    console.log(colors.gray('\n─────────────────────────────'));
-    console.log(colors.yellow(`[${moment().format('YYYY-MM-DD HH:mm:ss')}]`));
-
-    console.log(colors.cyan('Query:'), query);
-    if (params) {
-        console.log(colors.green('Params:'), params);
-    }
-
-    console.log(colors.magenta('Result:'), JSON.stringify(result, null, 2));
-
-    // 배열인 경우에만 행 수 표시
-    if (Array.isArray(result)) {
-        console.log(colors.gray(`Total rows: ${result.length}`));
-    }
-
-    console.log(colors.gray('─────────────────────────────\n'));
+const logQuery = (query, params, result, startTime = null) => {
+    const duration = startTime !== null 
+        ? Number((Number(process.hrtime.bigint() - startTime) / 1000000).toFixed(2))
+        : null;
+    logger.query(query, params, result, duration);
 };
 
 // 기존 pool.query를 저장
@@ -50,12 +38,13 @@ const originalPoolQuery = pool.query.bind(pool);
  * @returns {Promise<Array>} - 쿼리 결과
  */
 pool.query = async (query, params) => {
+    const startTime = process.hrtime.bigint();
     try {
         const [rows] = await originalPoolQuery(query, params);
-        logQuery(query, params, rows);
+        logQuery(query, params, rows, startTime);
         return [rows];
     } catch (error) {
-        console.error(colors.red('Query Error:'), error);
+        logger.queryError(query, params, error);
         throw error;
     }
 };
@@ -69,9 +58,15 @@ const dbConnectionMiddleware = async (req, res, next) => {
 
         const originalQuery = connection.query.bind(connection);
         connection.query = async (...args) => {
-            const [rows] = await originalQuery(...args);
-            logQuery(args[0], args[1], rows);
-            return [rows];
+            const startTime = process.hrtime.bigint();
+            try {
+                const [rows] = await originalQuery(...args);
+                logQuery(args[0], args[1], rows, startTime);
+                return [rows];
+            } catch (error) {
+                logger.queryError(args[0], args[1], error);
+                throw error;
+            }
         };
 
         req.db = connection;
@@ -82,7 +77,10 @@ const dbConnectionMiddleware = async (req, res, next) => {
 
         next();
     } catch (error) {
-        console.error(colors.red('DB Error:'), error);
+        logger.error('Database connection failed', error, {
+            path: req.path,
+            method: req.method,
+        });
         res.status(500).json({ error: 'Database connection failed' });
     }
 };

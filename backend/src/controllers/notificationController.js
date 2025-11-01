@@ -1,4 +1,5 @@
 import NotificationModel from '../models/notificationModel.js';
+import logger from '../utils/logger.js';
 
 const notificationController = {
     // 알림 목록 조회
@@ -36,7 +37,7 @@ const notificationController = {
                 data: result
             });
         } catch (error) {
-            console.error('알림 목록 조회 오류:', error);
+            logger.error('알림 목록 조회 오류', error);
             res.status(500).json({
                 success: false,
                 message: '서버 오류가 발생했습니다.'
@@ -74,7 +75,7 @@ const notificationController = {
                 }
             });
         } catch (error) {
-            console.error('알림 읽음 처리 오류:', error);
+            logger.error('알림 읽음 처리 오류', error);
             res.status(500).json({
                 success: false,
                 message: '서버 오류가 발생했습니다.'
@@ -96,7 +97,7 @@ const notificationController = {
                 }
             });
         } catch (error) {
-            console.error('전체 알림 읽음 처리 오류:', error);
+            logger.error('전체 알림 읽음 처리 오류', error);
             res.status(500).json({
                 success: false,
                 message: '서버 오류가 발생했습니다.'
@@ -131,7 +132,7 @@ const notificationController = {
                 message: '알림이 삭제되었습니다.'
             });
         } catch (error) {
-            console.error('알림 삭제 오류:', error);
+            logger.error('알림 삭제 오류', error);
             res.status(500).json({
                 success: false,
                 message: '서버 오류가 발생했습니다.'
@@ -153,7 +154,7 @@ const notificationController = {
                 }
             });
         } catch (error) {
-            console.error('읽지 않은 알림 개수 조회 오류:', error);
+            logger.error('읽지 않은 알림 개수 조회 오류', error);
             res.status(500).json({
                 success: false,
                 message: '서버 오류가 발생했습니다.'

@@ -17,6 +17,7 @@ import sessionConfig from './config/session.js';
 import { setupChatSocket } from './socket/chatSocket.js';
 import { setupNotificationSocket } from './socket/notificationSocket.js';
 import swaggerSpecs from './config/swagger.js';
+import logger from './utils/logger.js';
 
 const app = express();
 const httpServer = createServer(app);
@@ -80,8 +81,8 @@ app.use('/api/v1', routes);
 // HTTP 서버 시작 (Socket.IO 포함)
 const PORT = process.env.PORT || 8000;
 httpServer.listen(PORT, () => {
-    console.log(`🚀 Server is running on port ${PORT}`);
-    console.log(`🔌 WebSocket server is ready`);
+    logger.info(`Server is running on port ${PORT}`);
+    logger.info('WebSocket server is ready');
 });
 
 export default app;
