@@ -5,10 +5,10 @@ import { pool } from '../middleware/dbConnection.js';
 const ProductController = {
     // 상품 등록
     async createProduct(req, res) {
-        console.log('[Product] 상품 등록 요청 시작 - memberId:', req.user?.memberId);
+        console.log('[Product] 상품 등록 요청 시작 - memberId:', req.user?.userId);
         const connection = await pool.getConnection();
         try {
-            const memberId = req.user?.memberId;
+            const memberId = req.user?.userId;
             if (!memberId) {
                 console.log('[Product] 상품 등록 실패 - 인증되지 않은 사용자');
                 return res.status(401).json({ error: 'Unauthorized' });
@@ -125,9 +125,9 @@ const ProductController = {
     // 상품 수정
     async updateProduct(req, res) {
         const { productId } = req.params;
-        console.log('[Product] 상품 수정 요청 - productId:', productId, 'memberId:', req.user?.memberId);
+        console.log('[Product] 상품 수정 요청 - productId:', productId, 'memberId:', req.user?.userId);
         try {
-            const memberId = req.user?.memberId;
+            const memberId = req.user?.userId;
             if (!memberId) {
                 console.log('[Product] 상품 수정 실패 - 인증되지 않은 사용자');
                 return res.status(401).json({ error: 'Unauthorized' });
@@ -165,9 +165,9 @@ const ProductController = {
     // 상품 삭제
     async deleteProduct(req, res) {
         const { productId } = req.params;
-        console.log('[Product] 상품 삭제 요청 - productId:', productId, 'memberId:', req.user?.memberId);
+        console.log('[Product] 상품 삭제 요청 - productId:', productId, 'memberId:', req.user?.userId);
         try {
-            const memberId = req.user?.memberId;
+            const memberId = req.user?.userId;
             if (!memberId) {
                 console.log('[Product] 상품 삭제 실패 - 인증되지 않은 사용자');
                 return res.status(401).json({ error: 'Unauthorized' });
@@ -198,7 +198,7 @@ const ProductController = {
     // 내 판매 내역 조회
     async getMyProducts(req, res) {
         try {
-            const memberId = req.user?.memberId;
+            const memberId = req.user?.userId;
             if (!memberId) {
                 return res.status(401).json({ error: 'Unauthorized' });
             }
@@ -217,9 +217,9 @@ const ProductController = {
     // 상품 좋아요 추가
     async likeProduct(req, res) {
         const { productId } = req.params;
-        console.log('[Product] 좋아요 추가 요청 - productId:', productId, 'memberId:', req.user?.memberId);
+        console.log('[Product] 좋아요 추가 요청 - productId:', productId, 'memberId:', req.user?.userId);
         try {
-            const memberId = req.user?.memberId;
+            const memberId = req.user?.userId;
             if (!memberId) {
                 console.log('[Product] 좋아요 추가 실패 - 인증되지 않은 사용자');
                 return res.status(401).json({ error: 'Unauthorized' });
@@ -260,9 +260,9 @@ const ProductController = {
     // 상품 좋아요 취소
     async unlikeProduct(req, res) {
         const { productId } = req.params;
-        console.log('[Product] 좋아요 취소 요청 - productId:', productId, 'memberId:', req.user?.memberId);
+        console.log('[Product] 좋아요 취소 요청 - productId:', productId, 'memberId:', req.user?.userId);
         try {
-            const memberId = req.user?.memberId;
+            const memberId = req.user?.userId;
             if (!memberId) {
                 console.log('[Product] 좋아요 취소 실패 - 인증되지 않은 사용자');
                 return res.status(401).json({ error: 'Unauthorized' });
