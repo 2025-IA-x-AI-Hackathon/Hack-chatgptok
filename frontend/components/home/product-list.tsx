@@ -79,46 +79,55 @@ const formatPrice = (price: number) => {
 
 export default function ProductList() {
     return (
-        <div className="min-h-screen bg-background pb-20">
-            <div className="max-w-7xl mx-auto px-4 py-6">
-                <h2 className="text-2xl font-bold mb-6">인기 상품</h2>
-                <div className="flex flex-col divide-y divide-border">
-                    {products.map((product) => (
+        <div className="min-h-screen bg-gradient-to-br from-background via-primary/5 to-background pb-24">
+            <div className="max-w-7xl mx-auto px-4 py-8">
+                {/* 헤더 섹션 */}
+                <div className="mb-10 animate-fade-in">
+                    <h2 className="text-4xl font-bold mb-3 gradient-text">
+                        인기 상품
+                    </h2>
+                    <p className="text-muted-foreground text-lg font-medium">
+                        믿을 수 있는 중고 거래, 지금 시작하세요
+                    </p>
+                </div>
+
+                {/* 그리드 레이아웃 */}
+                <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 animate-slide-up">
+                    {products.map((product, index) => (
                         <Link
                             key={product.id}
                             href={`/products/${product.id}`}
-                            className="group"
+                            className="group animate-fade-in"
+                            style={{ animationDelay: `${index * 0.05}s` }}
                         >
-                            <div className="flex gap-4 p-4 hover:bg-accent transition-colors">
+                            <div className="bg-card rounded-2xl overflow-hidden border border-border/50 shadow-md hover:shadow-2xl hover:shadow-primary/20 transition-all duration-500 hover:-translate-y-3 hover:border-primary/30">
                                 {/* 상품 썸네일 */}
-                                <div className="relative w-24 h-24 shrink-0 overflow-hidden rounded-lg bg-muted">
+                                <div className="relative aspect-square overflow-hidden bg-gradient-to-br from-muted to-muted/50">
                                     <Image
                                         src={product.thumbnail}
                                         alt={product.title}
                                         fill
-                                        className="object-cover transition-transform group-hover:scale-105"
-                                        sizes="96px"
+                                        className="object-cover transition-all duration-700 group-hover:scale-115 group-hover:rotate-1"
+                                        sizes="(max-width: 768px) 50vw, (max-width: 1024px) 33vw, 25vw"
                                         unoptimized
                                     />
+                                    {/* 좋아요 뱃지 */}
+                                    <div className="absolute top-3 right-3 bg-gradient-to-br from-rose-500 to-rose-600 text-white px-3 py-1.5 rounded-full flex items-center gap-1.5 text-xs font-semibold shadow-lg backdrop-blur-sm transition-transform group-hover:scale-110">
+                                        <Heart className="w-3.5 h-3.5 fill-white" />
+                                        <span>{product.likes}</span>
+                                    </div>
+                                    {/* 호버 오버레이 */}
+                                    <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
                                 </div>
 
                                 {/* 상품 정보 */}
-                                <div className="flex flex-col justify-between flex-1 min-w-0">
-                                    <div>
-                                        <h3 className="text-base font-medium line-clamp-2 group-hover:text-primary transition-colors">
-                                            {product.title}
-                                        </h3>
-                                    </div>
-                                    <div className="flex items-end justify-between">
-                                        <p className="text-lg font-bold">
-                                            {formatPrice(product.price)}
-                                        </p>
-                                        {/* 좋아요 */}
-                                        <div className="flex items-center gap-1 text-muted-foreground text-sm">
-                                            <Heart className="w-4 h-4" />
-                                            <span>{product.likes}</span>
-                                        </div>
-                                    </div>
+                                <div className="p-4 space-y-2">
+                                    <h3 className="text-sm font-semibold line-clamp-2 mb-2 group-hover:text-primary transition-colors leading-snug min-h-[2.5rem]">
+                                        {product.title}
+                                    </h3>
+                                    <p className="text-xl font-bold gradient-text">
+                                        {formatPrice(product.price)}
+                                    </p>
                                 </div>
                             </div>
                         </Link>
@@ -129,9 +138,24 @@ export default function ProductList() {
             {/* 상품 등록 플로팅 버튼 */}
             <Link
                 href="/products/new"
-                className="fixed bottom-20 right-4 w-14 h-14 bg-primary text-primary-foreground rounded-full flex items-center justify-center shadow-lg hover:bg-primary/90 transition-colors z-40"
+                className="gradient-primary text-white rounded-2xl flex items-center justify-center shadow-2xl hover:shadow-primary/60 hover:scale-110 transition-all duration-300 overflow-hidden"
+                style={{
+                    position: 'fixed',
+                    right: '1rem',
+                    bottom: '6rem',
+                    width: '4rem',
+                    height: '4rem',
+                    zIndex: 9999
+                }}
             >
-                <Plus className="w-6 h-6" />
+                <Plus className="w-8 h-8" strokeWidth={2.5} />
+                <div
+                    className="absolute top-0 w-full h-full bg-gradient-to-r from-transparent via-white/20 to-transparent pointer-events-none"
+                    style={{
+                        left: '-100%',
+                        transition: 'left 0.5s'
+                    }}
+                />
             </Link>
         </div>
     );
