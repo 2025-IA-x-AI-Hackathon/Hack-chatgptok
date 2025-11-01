@@ -7,7 +7,6 @@ import chatController from '../controllers/chatController.js';
 import uploadController from '../controllers/uploadController.js';
 
 // middleware
-import isAuthenticated from '../middleware/auth.js';
 import { authenticateToken } from '../middleware/authMiddleware.js';
 
 const router = express.Router();
@@ -753,18 +752,34 @@ router.put('/users/profile', authenticateToken, userController.updateProfile);
  *             schema:
  *               type: object
  *               properties:
- *                 products:
- *                   type: array
- *                   items:
- *                     $ref: '#/components/schemas/ProductListItem'
- *                 pagination:
- *                   $ref: '#/components/schemas/Pagination'
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: 상품 목록 조회에 성공했습니다.
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     products:
+ *                       type: array
+ *                       items:
+ *                         $ref: '#/components/schemas/ProductListItem'
+ *                     pagination:
+ *                       $ref: '#/components/schemas/Pagination'
  *       500:
  *         description: 서버 에러
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/Error'
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 message:
+ *                   type: string
+ *                   example: 상품 목록 조회 중 오류가 발생했습니다.
  */
 router.get('/products', productController.getProductList);
 
@@ -789,25 +804,58 @@ router.get('/products', productController.getProductList);
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/Product'
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: 상품 조회에 성공했습니다.
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     product:
+ *                       $ref: '#/components/schemas/Product'
  *       400:
  *         description: 잘못된 요청 (productId 누락)
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/Error'
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 message:
+ *                   type: string
+ *                   example: 상품 ID가 필요합니다.
  *       404:
  *         description: 상품을 찾을 수 없음
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/Error'
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 message:
+ *                   type: string
+ *                   example: 상품을 찾을 수 없습니다.
  *       500:
  *         description: 서버 에러
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/Error'
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 message:
+ *                   type: string
+ *                   example: 상품 조회 중 오류가 발생했습니다.
  */
 router.get('/products/:productId', productController.getProductById);
 
@@ -863,35 +911,62 @@ router.get('/products/:productId', productController.getProductById);
  *             schema:
  *               type: object
  *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
  *                 message:
  *                   type: string
- *                   example: Product created successfully
- *                 productId:
- *                   type: string
- *                   format: uuid
- *                   example: 550e8400-e29b-41d4-a716-446655440000
- *                 imageUrls:
- *                   type: array
- *                   items:
- *                     type: string
+ *                   example: 상품이 등록되었습니다.
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     productId:
+ *                       type: string
+ *                       format: uuid
+ *                       example: 550e8400-e29b-41d4-a716-446655440000
+ *                     imageUrls:
+ *                       type: array
+ *                       items:
+ *                         type: string
  *       400:
  *         description: 잘못된 요청 (필수 필드 누락, 이미지 URL 없음)
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/Error'
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 message:
+ *                   type: string
+ *                   example: 상품명과 가격은 필수 항목입니다.
  *       401:
  *         description: 인증 필요
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/Error'
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 message:
+ *                   type: string
+ *                   example: 인증이 필요합니다.
  *       500:
  *         description: 서버 에러
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/Error'
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 message:
+ *                   type: string
+ *                   example: 상품 등록 처리 중 오류가 발생했습니다.
  */
 router.post('/products', authenticateToken, productController.createProduct);
 
@@ -943,39 +1018,77 @@ router.post('/products', authenticateToken, productController.createProduct);
  *             schema:
  *               type: object
  *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
  *                 message:
  *                   type: string
- *                   example: Product updated successfully
+ *                   example: 상품이 수정되었습니다.
  *       400:
  *         description: 잘못된 요청
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/Error'
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 message:
+ *                   type: string
+ *                   example: 상품 ID가 필요합니다.
  *       401:
  *         description: 인증 필요
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/Error'
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 message:
+ *                   type: string
+ *                   example: 인증이 필요합니다.
  *       403:
  *         description: 권한 없음 (본인 상품 아님)
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/Error'
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 message:
+ *                   type: string
+ *                   example: 상품을 수정할 권한이 없습니다.
  *       404:
  *         description: 상품을 찾을 수 없음
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/Error'
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 message:
+ *                   type: string
+ *                   example: 상품을 찾을 수 없습니다.
  *       500:
  *         description: 서버 에러
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/Error'
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 message:
+ *                   type: string
+ *                   example: 상품 수정 중 오류가 발생했습니다.
  */
 router.put('/products/:productId', authenticateToken, productController.updateProduct);
 
@@ -1005,33 +1118,64 @@ router.put('/products/:productId', authenticateToken, productController.updatePr
  *             schema:
  *               type: object
  *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
  *                 message:
  *                   type: string
- *                   example: Product deleted successfully
+ *                   example: 상품이 삭제되었습니다.
  *       400:
  *         description: 잘못된 요청
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/Error'
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 message:
+ *                   type: string
+ *                   example: 상품 ID가 필요합니다.
  *       401:
  *         description: 인증 필요
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/Error'
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 message:
+ *                   type: string
+ *                   example: 인증이 필요합니다.
  *       404:
  *         description: 상품을 찾을 수 없음 또는 권한 없음 또는 이미 판매 완료됨
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/Error'
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 message:
+ *                   type: string
+ *                   example: 상품을 찾을 수 없거나 삭제할 수 없습니다.
  *       500:
  *         description: 서버 에러
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/Error'
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 message:
+ *                   type: string
+ *                   example: 상품 삭제 중 오류가 발생했습니다.
  */
 router.delete('/products/:productId', authenticateToken, productController.deleteProduct);
 
@@ -1058,22 +1202,45 @@ router.delete('/products/:productId', authenticateToken, productController.delet
  *             schema:
  *               type: object
  *               properties:
- *                 products:
- *                   type: array
- *                   items:
- *                     $ref: '#/components/schemas/ProductListItem'
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: 내 상품 목록 조회에 성공했습니다.
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     products:
+ *                       type: array
+ *                       items:
+ *                         $ref: '#/components/schemas/ProductListItem'
  *       401:
  *         description: 인증 필요
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/Error'
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 message:
+ *                   type: string
+ *                   example: 인증이 필요합니다.
  *       500:
  *         description: 서버 에러
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/Error'
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 message:
+ *                   type: string
+ *                   example: 내 상품 목록 조회 중 오류가 발생했습니다.
  */
 router.get('/my-products', authenticateToken, productController.getMyProducts);
 
@@ -1102,33 +1269,64 @@ router.get('/my-products', authenticateToken, productController.getMyProducts);
  *             schema:
  *               type: object
  *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
  *                 message:
  *                   type: string
- *                   example: Product liked successfully
+ *                   example: 좋아요가 추가되었습니다.
  *       400:
  *         description: 잘못된 요청 또는 이미 좋아요함
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/Error'
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 message:
+ *                   type: string
+ *                   example: 이미 좋아요한 상품입니다.
  *       401:
  *         description: 인증 필요
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/Error'
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 message:
+ *                   type: string
+ *                   example: 인증이 필요합니다.
  *       404:
  *         description: 상품을 찾을 수 없음
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/Error'
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 message:
+ *                   type: string
+ *                   example: 상품을 찾을 수 없습니다.
  *       500:
  *         description: 서버 에러
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/Error'
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 message:
+ *                   type: string
+ *                   example: 좋아요 추가 중 오류가 발생했습니다.
  */
 router.post('/products/:productId/like', authenticateToken, productController.likeProduct);
 
@@ -1157,33 +1355,64 @@ router.post('/products/:productId/like', authenticateToken, productController.li
  *             schema:
  *               type: object
  *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
  *                 message:
  *                   type: string
- *                   example: Product unliked successfully
+ *                   example: 좋아요가 취소되었습니다.
  *       400:
  *         description: 잘못된 요청 또는 좋아요 하지 않은 상품
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/Error'
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 message:
+ *                   type: string
+ *                   example: 좋아요하지 않은 상품입니다.
  *       401:
  *         description: 인증 필요
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/Error'
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 message:
+ *                   type: string
+ *                   example: 인증이 필요합니다.
  *       404:
  *         description: 상품을 찾을 수 없음
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/Error'
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 message:
+ *                   type: string
+ *                   example: 상품을 찾을 수 없습니다.
  *       500:
  *         description: 서버 에러
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/Error'
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 message:
+ *                   type: string
+ *                   example: 좋아요 취소 중 오류가 발생했습니다.
  */
 router.delete('/products/:productId/like', authenticateToken, productController.unlikeProduct);
 
