@@ -261,6 +261,17 @@ export default function ProductDetailPage({ params } : {
                 <div className="relative">
                     <Carousel setApi={setCarouselApi} className="w-full">
                         <CarouselContent>
+                            {/* 3D 뷰어 */}
+                            <CarouselItem>
+                                <div className="relative aspect-square bg-muted">
+                                    <iframe
+                                        src="http://kaprpc.iptime.org:5051/v/00000000-0000-4000-8000-000000000001"
+                                        className="w-full h-full border-0"
+                                        title={`${product.name} - 3D 뷰어`}
+                                    />
+                                </div>
+                            </CarouselItem>
+                            {/* 상품 이미지들 */}
                             {product?.images?.map((image, index) => (
                                 <CarouselItem key={image.image_id}>
                                     <div className="relative aspect-square bg-muted">
@@ -280,11 +291,9 @@ export default function ProductDetailPage({ params } : {
                     </Carousel>
 
                     {/* 이미지 카운터 뱃지 (우측 하단) */}
-                    {product.images && product.images.length > 1 && (
-                        <div className="absolute bottom-4 right-4 bg-black/60 text-white text-sm px-3 py-1.5 rounded-full backdrop-blur-sm">
-                            {currentImageIndex + 1} / {product.images.length}
-                        </div>
-                    )}
+                    <div className="absolute bottom-4 right-4 bg-black/60 text-white text-sm px-3 py-1.5 rounded-full backdrop-blur-sm">
+                        {currentImageIndex + 1} / {(product.images?.length || 0) + 1}
+                    </div>
 
                     {/* 3DGS 작업 상태 표시 */}
                     {/* {product.job_3dgs && product.job_3dgs.status !== 'DONE' && (

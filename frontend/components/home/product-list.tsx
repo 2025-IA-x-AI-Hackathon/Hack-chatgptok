@@ -6,6 +6,7 @@ import Image from "next/image";
 import { useInfiniteProducts } from "@/lib/hooks/use-products";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useEffect, useRef } from "react";
+import { useState } from "react";
 
 // 가격 포맷 함수
 const formatPrice = (price: number) => {
@@ -15,19 +16,95 @@ const formatPrice = (price: number) => {
 // 상품 아이템 Skeleton 컴포넌트
 function ProductItemSkeleton() {
     return (
-        <div className="flex gap-4 p-4">
-            <Skeleton className="w-24 h-24 shrink-0 rounded-lg" />
+        <div className="flex gap-6 p-6">
+            <Skeleton className="w-40 h-40 shrink-0 rounded-lg" />
             <div className="flex flex-col justify-between flex-1 min-w-0">
                 <div className="space-y-2">
-                    <Skeleton className="h-4 w-3/4" />
+                    <Skeleton className="h-5 w-3/4" />
                     <Skeleton className="h-4 w-1/2" />
                 </div>
                 <div className="flex items-end justify-between">
-                    <Skeleton className="h-6 w-24" />
+                    <Skeleton className="h-7 w-28" />
                     <Skeleton className="h-4 w-12" />
                 </div>
             </div>
         </div>
+    );
+}
+
+// 개별 상품 아이템 컴포넌트 (Intersection Observer 적용)
+function ProductItem({ product }: { product: any }) {
+    const [isVisible, setIsVisible] = useState(false);
+    const itemRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        const observer = new IntersectionObserver(
+            (entries) => {
+                entries.forEach((entry) => {
+                    if (entry.isIntersecting) {
+                        setIsVisible(true);
+                    }
+                });
+            },
+            {
+                rootMargin: "100px", // 화면에 들어오기 100px 전부터 로드
+            }
+        );
+
+        const currentItem = itemRef.current;
+        if (currentItem) {
+            observer.observe(currentItem);
+        }
+
+        return () => {
+            if (currentItem) {
+                observer.unobserve(currentItem);
+            }
+        };
+    }, []);
+
+    return (
+        <Link
+            href={`/products/${product.product_id}`}
+            className="group"
+        >
+            <div ref={itemRef} className="flex gap-6 p-6 hover:bg-accent transition-colors">
+                {/* 상품 썸네일 */}
+                <div className="relative w-40 h-40 shrink-0 overflow-hidden rounded-lg bg-muted">
+                    {isVisible ? (
+                        <iframe
+                            src="http://kaprpc.iptime.org:5051/v/rotate/00000000-0000-4000-8000-000000000001"
+                            className="w-full h-full border-0"
+                            title={product.name}
+                            loading="lazy"
+                        />
+                    ) : (
+                        <div className="w-full h-full flex items-center justify-center">
+                            <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+                        </div>
+                    )}
+                </div>
+
+                {/* 상품 정보 */}
+                <div className="flex flex-col justify-between flex-1 min-w-0">
+                    <div>
+                        <h3 className="text-lg font-medium line-clamp-2 group-hover:text-primary transition-colors">
+                            {product.name}
+                        </h3>
+                    </div>
+                    <div className="flex items-end justify-between">
+                        <p className="text-xl font-bold">
+                            {formatPrice(product.price)}
+                        </p>
+                        {/* 좋아요 */}
+                        <div className="flex items-center gap-1 text-muted-foreground text-sm">
+                            <Heart className="w-4 h-4" />
+                            <span>{product.likes_cnt}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </Link>
     );
 }
 
@@ -117,42 +194,7 @@ export default function ProductList() {
                     {!isLoading && !error && allProducts.length > 0 && (
                         <div className="flex flex-col divide-y divide-border">
                             {allProducts.map((product) => (
-                                <Link
-                                    key={product.product_id}
-                                    href={`/products/${product.product_id}`}
-                                    className="group"
-                                >
-                                    <div className="flex gap-4 p-4 hover:bg-accent transition-colors">
-                                        {/* 상품 썸네일 */}
-                                        <div className="relative w-24 h-24 shrink-0 overflow-hidden rounded-lg bg-muted">
-                                            <iframe
-                                                src="https://kaprpc.iptime.org:5051/v/rotate/00000000-0000-4000-8000-000000000001"
-                                                className="w-full h-full border-0"
-                                                title={product.name}
-                                                sandbox="allow-scripts allow-same-origin"
-                                            />
-                                        </div>
-
-                                        {/* 상품 정보 */}
-                                        <div className="flex flex-col justify-between flex-1 min-w-0">
-                                            <div>
-                                                <h3 className="text-base font-medium line-clamp-2 group-hover:text-primary transition-colors">
-                                                    {product.name}
-                                                </h3>
-                                            </div>
-                                            <div className="flex items-end justify-between">
-                                                <p className="text-lg font-bold">
-                                                    {formatPrice(product.price)}
-                                                </p>
-                                                {/* 좋아요 */}
-                                                <div className="flex items-center gap-1 text-muted-foreground text-sm">
-                                                    <Heart className="w-4 h-4" />
-                                                    <span>{product.likes_cnt}</span>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </Link>
+                                <ProductItem key={product.product_id} product={product} />
                             ))}
 
                             {/* Intersection Observer 타겟 */}
