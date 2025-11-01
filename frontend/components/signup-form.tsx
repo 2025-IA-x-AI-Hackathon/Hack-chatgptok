@@ -1,155 +1,265 @@
 "use client"
 
-import { UserPlus } from "lucide-react"
-import Link from "next/link"
-import { useRouter } from "next/navigation"
 import { useState } from "react"
+import { useRouter } from "next/navigation"
+import { useForm } from "react-hook-form"
+import { zodResolver } from "@hookform/resolvers/zod"
+import { useMutation } from "@tanstack/react-query"
 import { toast } from "sonner"
-
-import { cn } from "@/lib/utils"
-import { Button } from "@/components/ui/button"
-import {
-  Field,
-  FieldDescription,
-  FieldGroup,
-  FieldLabel,
-} from "@/components/ui/field"
-import { Input } from "@/components/ui/input"
+import { signupSchema, type SignupFormData } from "@/lib/schemas/auth"
 import { authApi } from "@/lib/api"
 
-export function SignupForm({
-  className,
-  ...props
-}: React.ComponentProps<"div">) {
+export function SignupForm() {
   const router = useRouter()
-  const [loading, setLoading] = useState(false)
-  const [formData, setFormData] = useState({
-    nickname: "",
-    email: "",
-    password: "",
-    passwordConfirm: "",
-  })
+  const [step, setStep] = useState(1)
+  const [email, setEmail] = useState("")
+  const [password, setPassword] = useState("")
+  const [passwordConfirm, setPasswordConfirm] = useState("")
+  const [nickname, setNickname] = useState("")
+  const [img, setImg] = useState("")
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const totalSteps = 3
+  const progress = (step / totalSteps) * 100
+
+  const handleEmailSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (email) {
+      setStep(2)
+    }
+  }
+
+  const handlePasswordSubmit = (e: React.FormEvent) => {
     e.preventDefault()
 
-    // 유효성 검사
-    if (!formData.nickname || !formData.email || !formData.password || !formData.passwordConfirm) {
-      toast.error("모든 필드를 입력해주세요.")
-      return
-    }
-
-    if (formData.password !== formData.passwordConfirm) {
+    if (password !== passwordConfirm) {
       toast.error("비밀번호가 일치하지 않습니다.")
       return
     }
 
-    // 비밀번호 길이 검증 (개발용 비활성화)
-    // if (formData.password.length < 8) {
-    //   toast.error("비밀번호는 최소 8자 이상이어야 합니다.")
-    //   return
-    // }
+    setStep(3)
+  }
 
-    setLoading(true)
-
-    try {
-      const response = await authApi.register({
-        nickname: formData.nickname,
-        email: formData.email,
-        password: formData.password,
-      })
-
-      if (response.success && response.data) {
-        toast.success("회원가입이 완료되었습니다!")
-        // 회원가입 성공 시 홈으로 이동
+  const signupMutation = useMutation({
+    mutationFn: (data: { email: string; password: string; nickname: string; img?: string }) =>
+      authApi.register(data),
+    onSuccess: (response) => {
+      if (response.success) {
+        toast.success("회원가입 성공!")
         router.push("/")
       } else {
-        toast.error(response.error?.message || "회원가입에 실패했습니다.")
+        toast.error(response.error?.message || "회원가입에 실패했습니다")
       }
-    } catch (error) {
-      toast.error("회원가입 중 오류가 발생했습니다.")
-    } finally {
-      setLoading(false)
+    },
+    onError: (error) => {
+      console.error("Signup error:", error)
+      toast.error("회원가입 중 오류가 발생했습니다")
+    },
+  })
+
+  const handleSignupSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+
+    signupMutation.mutate({
+      email,
+      password,
+      nickname,
+      img: img || undefined,
+    })
+  }
+
+  const handleBack = () => {
+    if (step > 1) {
+      setStep(step - 1)
+    } else {
+      router.push("/login")
     }
   }
 
   return (
-    <div className={cn("flex flex-col gap-6", className)} {...props}>
-      <div className="bg-card/50 backdrop-blur-xl border border-border/50 rounded-2xl shadow-2xl shadow-primary/10 p-8 animate-scale-in">
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <FieldGroup>
-            <div className="flex flex-col items-center gap-3 text-center mb-8">
-              <div className="flex size-16 items-center justify-center rounded-2xl gradient-primary shadow-lg">
-                <UserPlus className="size-8 text-white" />
-              </div>
-              <h1 className="text-3xl font-bold gradient-text">회원가입</h1>
-              <FieldDescription className="text-base">
-                이미 계정이 있으신가요?{" "}
-                <Link href="/login" className="text-primary font-semibold hover:underline">
-                  로그인
-                </Link>
-              </FieldDescription>
-            </div>
-            <Field>
-              <FieldLabel htmlFor="nickname" className="text-base font-semibold">닉네임</FieldLabel>
-              <Input
-                id="nickname"
-                type="text"
-                placeholder="홍길동"
-                required
-                value={formData.nickname}
-                onChange={(e) => setFormData({ ...formData, nickname: e.target.value })}
-                className="h-12 text-base rounded-xl border-border/50 focus:border-primary/50 transition-colors"
-              />
-            </Field>
-            <Field>
-              <FieldLabel htmlFor="email" className="text-base font-semibold">이메일</FieldLabel>
-              <Input
+    <div className="w-full max-w-md mx-auto px-6">
+      {/* Progress Bar */}
+      <div className="mb-8">
+        <div className="flex justify-between items-center mb-2">
+          <span className="text-sm font-medium">
+            {step} / {totalSteps}
+          </span>
+          <span className="text-sm font-medium">{Math.round(progress)}%</span>
+        </div>
+        <div className="w-full h-2 bg-gray-200 rounded-full overflow-hidden">
+          <div
+            className="h-full bg-primary transition-all duration-300 ease-out"
+            style={{ width: `${progress}%` }}
+          />
+        </div>
+      </div>
+
+      {/* Step 1: 이메일 입력 */}
+      {step === 1 && (
+        <div>
+          <h1 className="text-2xl font-bold text-center mb-2">
+            회원가입
+          </h1>
+          <p className="text-center text-gray-600 mb-8">
+            이메일을 입력해주세요
+          </p>
+
+          <form onSubmit={handleEmailSubmit} className="space-y-5">
+            <div>
+              <label htmlFor="email" className="block text-sm font-medium mb-2">
+                이메일
+              </label>
+              <input
                 id="email"
                 type="email"
-                placeholder="example@email.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
                 required
-                value={formData.email}
-                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                className="h-12 text-base rounded-xl border-border/50 focus:border-primary/50 transition-colors"
+                autoFocus
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all"
+                placeholder="이메일을 입력하세요"
               />
-            </Field>
-            <Field>
-              <FieldLabel htmlFor="password" className="text-base font-semibold">비밀번호</FieldLabel>
-              <Input
+            </div>
+
+            <div className="flex gap-3 mt-8">
+              <button
+                type="button"
+                onClick={handleBack}
+                className="flex-1 bg-transparent text-gray-700 font-semibold py-3 rounded-lg border-2 border-gray-300 hover:bg-gray-50 transition-colors"
+              >
+                이전
+              </button>
+              <button
+                type="submit"
+                className="flex-1 bg-primary text-white font-semibold py-3 rounded-lg hover:bg-primary/90 transition-colors"
+              >
+                다음
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {/* Step 2: 비밀번호 입력 */}
+      {step === 2 && (
+        <div>
+          <h1 className="text-2xl font-bold text-center mb-2">
+            비밀번호 설정
+          </h1>
+          <p className="text-center text-gray-600 mb-8">
+            사용하실 비밀번호를 입력해주세요
+          </p>
+
+          <form onSubmit={handlePasswordSubmit} className="space-y-5">
+            <div>
+              <label htmlFor="password" className="block text-sm font-medium mb-2">
+                비밀번호
+              </label>
+              <input
                 id="password"
                 type="password"
-                placeholder="••••••••"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
                 required
-                value={formData.password}
-                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                className="h-12 text-base rounded-xl border-border/50 focus:border-primary/50 transition-colors"
+                autoFocus
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all"
+                placeholder="비밀번호를 입력하세요"
               />
-            </Field>
-            <Field>
-              <FieldLabel htmlFor="password-confirm" className="text-base font-semibold">비밀번호 확인</FieldLabel>
-              <Input
-                id="password-confirm"
+            </div>
+
+            <div>
+              <label htmlFor="passwordConfirm" className="block text-sm font-medium mb-2">
+                비밀번호 확인
+              </label>
+              <input
+                id="passwordConfirm"
                 type="password"
-                placeholder="••••••••"
+                value={passwordConfirm}
+                onChange={(e) => setPasswordConfirm(e.target.value)}
                 required
-                value={formData.passwordConfirm}
-                onChange={(e) => setFormData({ ...formData, passwordConfirm: e.target.value })}
-                className="h-12 text-base rounded-xl border-border/50 focus:border-primary/50 transition-colors"
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all"
+                placeholder="비밀번호를 다시 입력하세요"
               />
-            </Field>
-            <Field className="pt-4">
-              <Button
-                type="submit"
-                disabled={loading}
-                className="w-full h-12 text-base font-semibold gradient-primary hover:shadow-lg hover:shadow-primary/30 transition-all duration-300"
+            </div>
+
+            <div className="flex gap-3 mt-8">
+              <button
+                type="button"
+                onClick={handleBack}
+                className="flex-1 bg-transparent text-gray-700 font-semibold py-3 rounded-lg border-2 border-gray-300 hover:bg-gray-50 transition-colors"
               >
-                {loading ? "가입 중..." : "가입하기"}
-              </Button>
-            </Field>
-          </FieldGroup>
-        </form>
-      </div>
+                이전
+              </button>
+              <button
+                type="submit"
+                className="flex-1 bg-primary text-white font-semibold py-3 rounded-lg hover:bg-primary/90 transition-colors"
+              >
+                다음
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {/* Step 3: 닉네임 및 프로필 이미지 입력 */}
+      {step === 3 && (
+        <div>
+          <h1 className="text-2xl font-bold text-center mb-2">
+            프로필 설정
+          </h1>
+          <p className="text-center text-gray-600 mb-8">
+            닉네임과 프로필 이미지를 입력해주세요
+          </p>
+
+          <form onSubmit={handleSignupSubmit} className="space-y-5">
+            <div>
+              <label htmlFor="nickname" className="block text-sm font-medium mb-2">
+                닉네임
+              </label>
+              <input
+                id="nickname"
+                type="text"
+                value={nickname}
+                onChange={(e) => setNickname(e.target.value)}
+                required
+                autoFocus
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all"
+                placeholder="닉네임을 입력하세요"
+              />
+            </div>
+
+            <div>
+              <label htmlFor="img" className="block text-sm font-medium mb-2">
+                프로필 이미지 URL (선택사항)
+              </label>
+              <input
+                id="img"
+                type="text"
+                value={img}
+                onChange={(e) => setImg(e.target.value)}
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all"
+                placeholder="이미지 URL을 입력하세요"
+              />
+            </div>
+
+            <div className="flex gap-3 mt-8">
+              <button
+                type="button"
+                onClick={handleBack}
+                className="flex-1 bg-transparent text-gray-700 font-semibold py-3 rounded-lg border-2 border-gray-300 hover:bg-gray-50 transition-colors"
+              >
+                이전
+              </button>
+              <button
+                type="submit"
+                disabled={signupMutation.isPending}
+                className="flex-1 bg-primary text-white font-semibold py-3 rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {signupMutation.isPending ? "가입 중..." : "가입하기"}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
     </div>
   )
 }

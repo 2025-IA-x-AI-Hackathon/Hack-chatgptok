@@ -134,22 +134,36 @@ export default function ProductList() {
     }
 
     return (
-        <div className="min-h-screen bg-background pb-20">
+        <div className="fixed inset-0 flex flex-col bg-background pb-16">
             {/* 고정 헤더 */}
-            <div className="sticky top-0 z-10 bg-background border-b">
+            <div className="shrink-0 bg-background">
                 <div className="max-w-7xl mx-auto px-4 py-6">
                     <h2 className="text-2xl font-bold">인기 상품</h2>
                 </div>
             </div>
 
-            {/* 상품 목록 */}
-            <div className="max-w-7xl mx-auto">
-                <div className="flex flex-col divide-y divide-border">
-                    {products.map((product) => {
-                        // 썸네일 이미지 가져오기 (첫 번째 이미지 또는 기본 이미지)
-                        const thumbnail = product.images && product.images.length > 0
-                            ? product.images[0].s3_url
-                            : "http://52.78.124.23:4000/public/uploads/posts/default.jpg";
+            {/* 상품 목록 (스크롤 가능) */}
+            <div className="flex-1 overflow-y-auto">
+                <div className="max-w-7xl mx-auto">
+                    <div className="flex flex-col divide-y divide-border">
+                    {products.map((product) => (
+                        <Link
+                            key={product.id}
+                            href={`/products/${product.id}`}
+                            className="group"
+                        >
+                            <div className="flex gap-4 p-4 hover:bg-accent transition-colors">
+                                {/* 상품 썸네일 */}
+                                <div className="relative w-24 h-24 shrink-0 overflow-hidden rounded-lg bg-muted">
+                                    <Image
+                                        src={product.thumbnail}
+                                        alt={product.title}
+                                        fill
+                                        className="object-cover transition-transform group-hover:scale-105"
+                                        sizes="96px"
+                                        unoptimized
+                                    />
+                                </div>
 
                         return (
                             <Link
@@ -204,9 +218,10 @@ export default function ProductList() {
                                         </div>
                                     </div>
                                 </div>
-                            </Link>
-                        );
-                    })}
+                            </div>
+                        </Link>
+                    ))}
+                    </div>
                 </div>
             </div>
 

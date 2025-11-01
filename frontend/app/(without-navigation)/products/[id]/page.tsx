@@ -11,6 +11,13 @@ import {
     CarouselItem,
     type CarouselApi,
 } from "@/components/ui/carousel";
+import {
+    Sheet,
+    SheetContent,
+    SheetHeader,
+    SheetTitle,
+    SheetTrigger,
+} from "@/components/ui/sheet";
 import { toast } from "sonner";
 import { productApi, likeApi, chatApi } from "@/lib/api";
 import type { ProductDetail } from "@/lib/types";
@@ -47,6 +54,7 @@ export default function ProductDetailPage() {
     const [isLiked, setIsLiked] = useState(false);
     const [carouselApi, setCarouselApi] = useState<CarouselApi>();
     const [currentImageIndex, setCurrentImageIndex] = useState(0);
+    const [isMenuOpen, setIsMenuOpen] = useState(false);
     const [isChatLoading, setIsChatLoading] = useState(false);
 
     // 진행 중인 요청을 추적하여 중복 호출 방지
@@ -276,9 +284,43 @@ export default function ProductDetailPage() {
                         <button className="p-2 hover:bg-accent rounded-lg transition-colors">
                             <Share2 className="w-5 h-5" />
                         </button>
-                        <button className="p-2 hover:bg-accent rounded-lg transition-colors">
-                            <MoreVertical className="w-5 h-5" />
-                        </button>
+                        <Sheet open={isMenuOpen} onOpenChange={setIsMenuOpen}>
+                            <SheetTrigger asChild>
+                                <button className="p-2 hover:bg-accent rounded-lg transition-colors">
+                                    <MoreVertical className="w-5 h-5" />
+                                </button>
+                            </SheetTrigger>
+                            <SheetContent side="bottom" className="rounded-t-2xl gap-0">
+                                <SheetHeader>
+                                    <SheetTitle>상품 관리</SheetTitle>
+                                </SheetHeader>
+                                <div className="flex flex-col gap-2">
+                                    <button
+                                        onClick={() => {
+                                            setIsMenuOpen(false);
+                                            router.push(`/products/${productId}/edit`);
+                                        }}
+                                        className="flex items-center gap-3 px-4 py-3 text-left hover:bg-accent rounded-lg transition-colors"
+                                    >
+                                        <Pencil className="w-5 h-5" />
+                                        <span className="text-base">수정</span>
+                                    </button>
+                                    <button
+                                        onClick={() => {
+                                            setIsMenuOpen(false);
+                                            if (confirm("정말 삭제하시겠습니까?")) {
+                                                toast.info("삭제 기능은 백엔드 연동 후 구현됩니다.");
+                                                router.push("/");
+                                            }
+                                        }}
+                                        className="flex items-center gap-3 px-4 py-3 text-left text-destructive hover:bg-destructive/10 rounded-lg transition-colors"
+                                    >
+                                        <Trash2 className="w-5 h-5" />
+                                        <span className="text-base">삭제</span>
+                                    </button>
+                                </div>
+                            </SheetContent>
+                        </Sheet>
                     </div>
                 </div>
             </div>
@@ -324,43 +366,22 @@ export default function ProductDetailPage() {
                 </div>
 
                 {/* 판매자 정보 */}
-                {product.seller && (
-                    <div className="p-4 border-b">
-                        <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-3">
-                                <div className="relative w-12 h-12 rounded-full overflow-hidden bg-muted">
-                                    <Image
-                                        src={product.seller.img || "http://52.78.124.23:4000/public/uploads/profiles/default.jpg"}
-                                        alt={product.seller.nickname}
-                                        fill
-                                        className="object-cover"
-                                        unoptimized
-                                    />
-                                </div>
-                                <div>
-                                    <p className="font-medium">{product.seller.nickname}</p>
-                                    <p className="text-sm text-muted-foreground">
-                                        판매자
-                                    </p>
-                                </div>
-                            </div>
-                            {/* 수정/삭제 버튼 - TODO: 본인 상품일 때만 표시 */}
-                            <div className="flex items-center gap-2">
-                                <button
-                                    onClick={() => router.push(`/products/${productId}/edit`)}
-                                    className="flex items-center gap-2 px-3 py-2 text-sm border rounded-lg hover:bg-accent transition-colors"
-                                >
-                                    <Pencil className="w-4 h-4" />
-                                    수정
-                                </button>
-                                <button
-                                    onClick={handleDelete}
-                                    className="flex items-center gap-2 px-3 py-2 text-sm border border-destructive text-destructive rounded-lg hover:bg-destructive/10 transition-colors"
-                                >
-                                    <Trash2 className="w-4 h-4" />
-                                    삭제
-                                </button>
-                            </div>
+                <div className="p-4 border-b">
+                    <div className="flex items-center gap-3">
+                        <div className="relative w-12 h-12 rounded-full overflow-hidden bg-muted">
+                            <Image
+                                src={product.seller.profileImage}
+                                alt={product.seller.name}
+                                fill
+                                className="object-cover"
+                                unoptimized
+                            />
+                        </div>
+                        <div>
+                            <p className="font-medium">{product.seller.name}</p>
+                            <p className="text-sm text-muted-foreground">
+                                {product.seller.location}
+                            </p>
                         </div>
                     </div>
                 )}

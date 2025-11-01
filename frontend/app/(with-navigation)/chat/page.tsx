@@ -75,9 +75,9 @@ export default function ChatPage() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="fixed inset-0 flex flex-col bg-background pb-16">
       {/* Header with filter badges */}
-      <div className="sticky top-0 z-10 bg-background border-b">
+      <div className="shrink-0 bg-background">
         <div className="max-w-7xl mx-auto px-4 py-6">
           <h1 className="text-2xl font-bold mb-4">채팅</h1>
           <div className="flex gap-2 overflow-x-auto pb-2">
@@ -200,6 +200,7 @@ export default function ChatPage() {
             ))}
           </div>
         )}
+        </div>
       </div>
     </div>
   );
