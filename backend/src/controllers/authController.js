@@ -56,12 +56,12 @@ const authController = {
 
             // JWT 토큰 생성
             const accessToken = generateAccessToken({
-                userId: newUser.member_id,
+                memberId: newUser.member_id,
                 email: newUser.email,
             });
 
             const refreshToken = generateRefreshToken({
-                userId: newUser.member_id,
+                memberId: newUser.member_id,
             });
 
             // 비밀번호 제외하고 응답
@@ -129,12 +129,12 @@ const authController = {
 
             // JWT 토큰 생성
             const accessToken = generateAccessToken({
-                userId: user.member_id,
+                memberId: user.member_id,
                 email: user.email,
             });
 
             const refreshToken = generateRefreshToken({
-                userId: user.member_id,
+                memberId: user.member_id,
             });
 
             // 비밀번호 제외하고 응답
@@ -192,9 +192,9 @@ const authController = {
             }
 
             // 사용자 조회
-            const user = await UserModel.findById(decoded.userId);
+            const user = await UserModel.findById(decoded.memberId);
             if (!user) {
-                console.log('[Auth] 토큰 갱신 실패 - 사용자 없음, userId:', decoded.userId);
+                console.log('[Auth] 토큰 갱신 실패 - 사용자 없음, memberId:', decoded.memberId);
                 return res.status(401).json({
                     success: false,
                     message: '사용자를 찾을 수 없습니다.',
@@ -203,7 +203,7 @@ const authController = {
 
             // 새로운 액세스 토큰 생성
             const newAccessToken = generateAccessToken({
-                userId: user.member_id,
+                memberId: user.member_id,
                 email: user.email,
             });
 
@@ -226,13 +226,13 @@ const authController = {
 
     // 내 정보 조회
     async getMe(req, res) {
-        console.log('[Auth] 내 정보 조회 요청 - 사용자 ID:', req.user?.userId);
+        console.log('[Auth] 내 정보 조회 요청 - 사용자 ID:', req.user?.memberId);
         try {
-            const userId = req.user.userId;
+            const memberId = req.user.memberId;
 
-            const user = await UserModel.findById(userId);
+            const user = await UserModel.findById(memberId);
             if (!user) {
-                console.log('[Auth] 내 정보 조회 실패 - 사용자 없음, userId:', userId);
+                console.log('[Auth] 내 정보 조회 실패 - 사용자 없음, memberId:', memberId);
                 return res.status(404).json({
                     success: false,
                     message: '사용자를 찾을 수 없습니다.',
@@ -248,7 +248,7 @@ const authController = {
                 created_at: user.created_at,
             };
 
-            console.log('[Auth] 내 정보 조회 성공 - 사용자 ID:', userId);
+            console.log('[Auth] 내 정보 조회 성공 - 사용자 ID:', memberId);
             res.status(200).json({
                 success: true,
                 data: {

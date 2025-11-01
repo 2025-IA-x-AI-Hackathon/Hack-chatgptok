@@ -5,7 +5,7 @@ export const isAuthenticated = (req, res, next) => {
     console.log('요청 경로:', req.path);
     console.log('요청 메소드:', req.method);
 
-    if (req.session && req.session.userId) {
+    if (req.session && req.session.memberId) {
         return next();
     }
     return res.status(401).json({ message: '인증이 필요합니다.' });

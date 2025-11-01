@@ -6,7 +6,7 @@ const chatController = {
     async createOrGetChatRoom(req, res) {
         try {
             const { productId } = req.body;
-            const buyerId = req.user.userId;
+            const buyerId = req.user.memberId;
 
             if (!productId) {
                 return res.status(400).json({
@@ -51,7 +51,7 @@ const chatController = {
     // 사용자의 채팅방 목록 조회
     async getChatRooms(req, res) {
         try {
-            const memberId = req.user.userId;
+            const memberId = req.user.memberId;
             const chatRooms = await ChatModel.getChatRoomsByUser(memberId);
 
             res.status(200).json({
@@ -71,7 +71,7 @@ const chatController = {
     async getChatRoomDetail(req, res) {
         try {
             const { chatRoomId } = req.params;
-            const memberId = req.user.userId;
+            const memberId = req.user.memberId;
 
             const chatRoom = await ChatModel.getChatRoomById(chatRoomId, memberId);
 
@@ -99,7 +99,7 @@ const chatController = {
     async getMessages(req, res) {
         try {
             const { chatRoomId } = req.params;
-            const memberId = req.user.userId;
+            const memberId = req.user.memberId;
 
             // 채팅방 접근 권한 확인
             const isMember = await ChatModel.isChatRoomMember(chatRoomId, memberId);
@@ -133,7 +133,7 @@ const chatController = {
         try {
             const { chatRoomId } = req.params;
             const { content } = req.body;
-            const senderId = req.user.userId;
+            const senderId = req.user.memberId;
 
             if (!content || content.trim() === '') {
                 return res.status(400).json({
@@ -170,7 +170,7 @@ const chatController = {
     async markAsRead(req, res) {
         try {
             const { chatRoomId } = req.params;
-            const memberId = req.user.userId;
+            const memberId = req.user.memberId;
 
             // 채팅방 접근 권한 확인
             const isMember = await ChatModel.isChatRoomMember(chatRoomId, memberId);

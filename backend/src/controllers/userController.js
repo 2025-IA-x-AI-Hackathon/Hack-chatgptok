@@ -34,10 +34,10 @@ const UserController = {
     // 프로필 조회
     async getProfile(req, res) {
         try {
-            // JWT 미들웨어에서 설정한 req.user.userId 사용
-            const userId = req.user.userId;
+            // JWT 미들웨어에서 설정한 req.user.memberId 사용
+            const memberId = req.user.memberId;
 
-            const user = await UserModel.findById(userId);
+            const user = await UserModel.findById(memberId);
 
             if (!user) {
                 return res.status(404).json({ error: '사용자를 찾을 수 없습니다.' });
@@ -61,7 +61,7 @@ const UserController = {
     // 프로필 수정
     async updateProfile(req, res) {
         try {
-            const userId = req.user.userId;
+            const memberId = req.user.memberId;
             const { nickname, password, img } = req.body;
 
             // 업데이트할 필드만 추출
@@ -74,14 +74,14 @@ const UserController = {
                 return res.status(400).json({ error: '업데이트할 정보가 없습니다.' });
             }
 
-            const success = await UserModel.updateUser(userId, updates);
+            const success = await UserModel.updateUser(memberId, updates);
 
             if (!success) {
                 return res.status(400).json({ error: '프로필 업데이트에 실패했습니다.' });
             }
 
             // 업데이트된 사용자 정보 조회
-            const updatedUser = await UserModel.findById(userId);
+            const updatedUser = await UserModel.findById(memberId);
 
             res.status(200).json({
                 message: '프로필이 성공적으로 업데이트되었습니다.',

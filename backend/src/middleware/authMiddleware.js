@@ -29,7 +29,7 @@ export const authenticateToken = (req, res, next) => {
         try {
             const decoded = verifyToken(token);
             req.user = decoded; // 요청 객체에 사용자 정보 추가
-            console.log(`[AuthMiddleware] 인증 성공 - userId: ${decoded.userId}, email: ${decoded.email} - ${requestId}`);
+            console.log(`[AuthMiddleware] 인증 성공 - memberId: ${decoded.memberId}, email: ${decoded.email} - ${requestId}`);
             next();
         } catch (error) {
             console.log(`[AuthMiddleware] 토큰 검증 실패 - ${error.message} - ${requestId}`);
@@ -64,7 +64,7 @@ export const optionalAuthenticateToken = (req, res, next) => {
             try {
                 const decoded = verifyToken(token);
                 req.user = decoded;
-                console.log(`[OptionalAuth] 토큰 검증 성공 - userId: ${decoded.userId} - ${requestId}`);
+                console.log(`[OptionalAuth] 토큰 검증 성공 - memberId: ${decoded.memberId} - ${requestId}`);
             } catch (error) {
                 // 토큰이 유효하지 않아도 계속 진행
                 console.log(`[OptionalAuth] 토큰 검증 실패 (계속 진행) - ${error.message} - ${requestId}`);
