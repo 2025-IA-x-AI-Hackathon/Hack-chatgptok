@@ -69,7 +69,8 @@ router.get('/health', (req, res) => {
  *                 example: 홍길동
  *               img:
  *                 type: string
- *                 example: https://example.com/profile.jpg
+ *                 description: S3 Key (업로드 후 받은 key 값)
+ *                 example: profiles/1234567890-abc.jpg
  *     responses:
  *       201:
  *         description: 회원가입 성공
@@ -556,10 +557,11 @@ router.post('/upload/presigned-urls', authenticateToken, uploadController.getMul
  *                         nickname:
  *                           type: string
  *                           example: 홍길동
- *                         img:
+ *                         img_url:
  *                           type: string
  *                           nullable: true
- *                           example: https://example.com/profile.jpg
+ *                           description: 프로필 이미지 Presigned URL (1시간 유효)
+ *                           example: https://bucket.s3.region.amazonaws.com/profiles/image.jpg?X-Amz-...
  *                         created_at:
  *                           type: string
  *                           format: date-time
@@ -633,7 +635,8 @@ router.get('/users/:userId/profile', userController.getProfile);
  *                 example: newPassword123
  *               img:
  *                 type: string
- *                 example: https://example.com/new-profile.jpg
+ *                 description: S3 Key (업로드 후 받은 key 값)
+ *                 example: profiles/1234567890-abc.jpg
  *     responses:
  *       200:
  *         description: 프로필 수정 성공
@@ -663,10 +666,11 @@ router.get('/users/:userId/profile', userController.getProfile);
  *                         nickname:
  *                           type: string
  *                           example: 새로운닉네임
- *                         img:
+ *                         img_url:
  *                           type: string
  *                           nullable: true
- *                           example: https://example.com/new-profile.jpg
+ *                           description: 프로필 이미지 Presigned URL (1시간 유효)
+ *                           example: https://bucket.s3.region.amazonaws.com/profiles/image.jpg?X-Amz-...
  *                         created_at:
  *                           type: string
  *                           format: date-time
