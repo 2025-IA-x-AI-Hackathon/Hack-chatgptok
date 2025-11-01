@@ -1,6 +1,6 @@
 "use client";
 
-import { Heart } from "lucide-react";
+import { Heart, Plus } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
 
@@ -125,6 +125,14 @@ export default function ProductList() {
                     ))}
                 </div>
             </div>
+
+            {/* 상품 등록 플로팅 버튼 */}
+            <Link
+                href="/products/new"
+                className="fixed bottom-20 right-4 w-14 h-14 bg-primary text-primary-foreground rounded-full flex items-center justify-center shadow-lg hover:bg-primary/90 transition-colors z-40"
+            >
+                <Plus className="w-6 h-6" />
+            </Link>
         </div>
     );
 }
