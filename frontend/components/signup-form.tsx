@@ -1,90 +1,184 @@
 "use client"
 
-import { UserPlus } from "lucide-react"
-import Link from "next/link"
+import Image from "next/image"
+import { useState } from "react"
+import { useRouter } from "next/navigation"
+import { toast } from "sonner"
 
-import { cn } from "@/lib/utils"
-import { Button } from "@/components/ui/button"
-import {
-  Field,
-  FieldDescription,
-  FieldGroup,
-  FieldLabel,
-} from "@/components/ui/field"
-import { Input } from "@/components/ui/input"
+export function SignupForm() {
+  const router = useRouter()
+  const [step, setStep] = useState(1)
+  const [email, setEmail] = useState("")
+  const [password, setPassword] = useState("")
+  const [passwordConfirm, setPasswordConfirm] = useState("")
+  const [isLoading, setIsLoading] = useState(false)
 
-export function SignupForm({
-  className,
-  ...props
-}: React.ComponentProps<"div">) {
+  const totalSteps = 2
+  const progress = (step / totalSteps) * 100
+
+  const handleEmailSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (email) {
+      setStep(2)
+    }
+  }
+
+  const handlePasswordSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+
+    if (password !== passwordConfirm) {
+      toast.error("비밀번호가 일치하지 않습니다.")
+      return
+    }
+
+    setIsLoading(true)
+
+    // TODO: 실제 회원가입 API 호출 로직 구현
+    try {
+      console.log("Signup attempt:", { email, password })
+
+      // 성공 시 로그인 페이지로 이동
+      // router.push("/login")
+    } catch (error) {
+      console.error("Signup failed:", error)
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const handleBack = () => {
+    if (step > 1) {
+      setStep(step - 1)
+    } else {
+      router.push("/login")
+    }
+  }
+
   return (
-    <div className={cn("flex flex-col gap-6", className)} {...props}>
-      <div className="bg-card/50 backdrop-blur-xl border border-border/50 rounded-2xl shadow-2xl shadow-primary/10 p-8 animate-scale-in">
-        <form className="space-y-6">
-          <FieldGroup>
-            <div className="flex flex-col items-center gap-3 text-center mb-8">
-              <div className="flex size-16 items-center justify-center rounded-2xl gradient-primary shadow-lg">
-                <UserPlus className="size-8 text-white" />
-              </div>
-              <h1 className="text-3xl font-bold gradient-text">회원가입</h1>
-              <FieldDescription className="text-base">
-                이미 계정이 있으신가요?{" "}
-                <Link href="/login" className="text-primary font-semibold hover:underline">
-                  로그인
-                </Link>
-              </FieldDescription>
-            </div>
-            <Field>
-              <FieldLabel htmlFor="name" className="text-base font-semibold">이름</FieldLabel>
-              <Input
-                id="name"
-                type="text"
-                placeholder="홍길동"
-                required
-                className="h-12 text-base rounded-xl border-border/50 focus:border-primary/50 transition-colors"
-              />
-            </Field>
-            <Field>
-              <FieldLabel htmlFor="email" className="text-base font-semibold">이메일</FieldLabel>
-              <Input
+    <div className="w-full max-w-md mx-auto px-6">
+      {/* Progress Bar */}
+      <div className="mb-8">
+        <div className="flex justify-between items-center mb-2">
+          <span className="text-sm font-medium">
+            {step} / {totalSteps}
+          </span>
+          <span className="text-sm font-medium">{Math.round(progress)}%</span>
+        </div>
+        <div className="w-full h-2 bg-gray-200 rounded-full overflow-hidden">
+          <div
+            className="h-full bg-primary transition-all duration-300 ease-out"
+            style={{ width: `${progress}%` }}
+          />
+        </div>
+      </div>
+
+      {/* Step 1: 이메일 입력 */}
+      {step === 1 && (
+        <div>
+          <h1 className="text-2xl font-bold text-center mb-2">
+            회원가입
+          </h1>
+          <p className="text-center text-gray-600 mb-8">
+            이메일을 입력해주세요
+          </p>
+
+          <form onSubmit={handleEmailSubmit} className="space-y-5">
+            <div>
+              <label htmlFor="email" className="block text-sm font-medium mb-2">
+                이메일
+              </label>
+              <input
                 id="email"
                 type="email"
-                placeholder="example@email.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
                 required
-                className="h-12 text-base rounded-xl border-border/50 focus:border-primary/50 transition-colors"
+                autoFocus
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all"
+                placeholder="이메일을 입력하세요"
               />
-            </Field>
-            <Field>
-              <FieldLabel htmlFor="password" className="text-base font-semibold">비밀번호</FieldLabel>
-              <Input
+            </div>
+
+            <div className="flex gap-3 mt-8">
+              <button
+                type="button"
+                onClick={handleBack}
+                className="flex-1 bg-transparent text-gray-700 font-semibold py-3 rounded-lg border-2 border-gray-300 hover:bg-gray-50 transition-colors"
+              >
+                이전
+              </button>
+              <button
+                type="submit"
+                className="flex-1 bg-primary text-white font-semibold py-3 rounded-lg hover:bg-primary/90 transition-colors"
+              >
+                다음
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {/* Step 2: 비밀번호 입력 */}
+      {step === 2 && (
+        <div>
+          <h1 className="text-2xl font-bold text-center mb-2">
+            비밀번호 설정
+          </h1>
+          <p className="text-center text-gray-600 mb-8">
+            사용하실 비밀번호를 입력해주세요
+          </p>
+
+          <form onSubmit={handlePasswordSubmit} className="space-y-5">
+            <div>
+              <label htmlFor="password" className="block text-sm font-medium mb-2">
+                비밀번호
+              </label>
+              <input
                 id="password"
                 type="password"
-                placeholder="••••••••"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
                 required
-                className="h-12 text-base rounded-xl border-border/50 focus:border-primary/50 transition-colors"
+                autoFocus
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all"
+                placeholder="비밀번호를 입력하세요"
               />
-            </Field>
-            <Field>
-              <FieldLabel htmlFor="password-confirm" className="text-base font-semibold">비밀번호 확인</FieldLabel>
-              <Input
-                id="password-confirm"
+            </div>
+
+            <div>
+              <label htmlFor="passwordConfirm" className="block text-sm font-medium mb-2">
+                비밀번호 확인
+              </label>
+              <input
+                id="passwordConfirm"
                 type="password"
-                placeholder="••••••••"
+                value={passwordConfirm}
+                onChange={(e) => setPasswordConfirm(e.target.value)}
                 required
-                className="h-12 text-base rounded-xl border-border/50 focus:border-primary/50 transition-colors"
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all"
+                placeholder="비밀번호를 다시 입력하세요"
               />
-            </Field>
-            <Field className="pt-4">
-              <Button
-                type="submit"
-                className="w-full h-12 text-base font-semibold gradient-primary hover:shadow-lg hover:shadow-primary/30 transition-all duration-300"
+            </div>
+
+            <div className="flex gap-3 mt-8">
+              <button
+                type="button"
+                onClick={handleBack}
+                className="flex-1 bg-transparent text-gray-700 font-semibold py-3 rounded-lg border-2 border-gray-300 hover:bg-gray-50 transition-colors"
               >
-                가입하기
-              </Button>
-            </Field>
-          </FieldGroup>
-        </form>
-      </div>
+                이전
+              </button>
+              <button
+                type="submit"
+                disabled={isLoading}
+                className="flex-1 bg-primary text-white font-semibold py-3 rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isLoading ? "가입 중..." : "가입하기"}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
     </div>
   )
 }
