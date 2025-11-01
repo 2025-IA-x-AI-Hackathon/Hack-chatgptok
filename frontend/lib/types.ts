@@ -1,6 +1,20 @@
 // API 타입 정의
 
 // ============ 공통 타입 ============
+
+/**
+ * 서버 Envelope 응답 구조
+ * 서버에서 반환하는 모든 응답은 이 구조로 감싸져 있음
+ */
+export interface ServerEnvelope<T> {
+    success: boolean;
+    message?: string;
+    data: T;
+}
+
+/**
+ * 클라이언트에서 사용하는 API 응답 타입
+ */
 export interface ApiResponse<T> {
     success: boolean;
     data?: T;
@@ -17,29 +31,35 @@ export interface ApiError {
 }
 
 export interface Pagination {
-    currentPage: number;
+    page: number;
+    limit: number;
+    total: number;
     totalPages: number;
-    totalItems: number;
-    itemsPerPage: number;
 }
 
 // ============ 상품 타입 ============
+export type SellStatus = 'ACTIVE' | 'SOLD' | 'RESERVED';
+
 export interface Product {
-    id: number;
-    title: string;
+    product_id: string;
+    member_id: number;
+    name: string;
     price: number;
-    thumbnail: string;
-    likes: number;
-    views: number;
-    location: string;
-    createdAt: string;
+    description: string;
+    sell_status: SellStatus;
+    job_count: number;
+    ply_url: string;
+    view_cnt: number;
+    likes_cnt: number;
+    created_at: string;
+    updated_at: string | null;
+    seller_nickname: string;
+    seller_img: string;
+    thumbnail: string | null;
 }
 
 export interface ProductDetail extends Product {
-    description: string;
-    images: string[];
-    seller: User;
-    updatedAt: string;
+    images?: string[];
 }
 
 export interface ProductListResponse {
@@ -48,19 +68,18 @@ export interface ProductListResponse {
 }
 
 export interface CreateProductRequest {
-    title: string;
+    name: string;
     price: number;
     description: string;
-    location: string;
     images: string[];
 }
 
 export interface UpdateProductRequest {
-    title: string;
-    price: number;
-    description: string;
-    location: string;
-    images: string[];
+    name?: string;
+    price?: number;
+    description?: string;
+    images?: string[];
+    sell_status?: SellStatus;
 }
 
 // ============ 사용자 타입 ============
@@ -85,10 +104,13 @@ export interface RegisterRequest {
     img?: string;
 }
 
+/**
+ * 인증 응답 데이터 (envelope.data 안에 있는 실제 데이터)
+ */
 export interface AuthResponse {
     accessToken: string;
     refreshToken: string;
-    user: User;
+    user?: User;
 }
 
 export interface RefreshTokenRequest {
@@ -113,6 +135,28 @@ export interface ImageUploadResponse {
     filename: string;
     size: number;
     mimeType: string;
+}
+
+export interface PresignedUrlsRequest {
+    files: Array<{
+        filename: string;
+        contentType: string;
+    }>;
+}
+
+export interface PresignedUploadInfo {
+    originalFilename: string;
+    uploadUrl: string;
+    fileUrl: string;
+    key: string;
+}
+
+/**
+ * Presigned URL 응답 데이터 (envelope.data 안에 있는 실제 데이터)
+ */
+export interface PresignedUrlsResponse {
+    uploads: PresignedUploadInfo[];
+    expiresIn: number;
 }
 
 // ============ 채팅 타입 ============

@@ -16,6 +16,8 @@
 
 import type {
     ApiResponse,
+    ServerEnvelope,
+    Product,
     ProductListResponse,
     ProductDetail,
     CreateProductRequest,
@@ -23,10 +25,11 @@ import type {
     LoginRequest,
     RegisterRequest,
     AuthResponse,
-    RefreshTokenRequest,
     RefreshTokenResponse,
     LikeResponse,
     ImageUploadResponse,
+    PresignedUrlsRequest,
+    PresignedUrlsResponse,
     ChatRoom,
     ChatRoomDetail,
     ChatMessagesResponse,
@@ -36,7 +39,7 @@ import type {
 } from "./types";
 
 // API Base URL
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000/api";
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000/api/v1";
 
 // ============ 헬퍼 함수 ============
 
@@ -108,12 +111,18 @@ function createHeaders(includeAuth: boolean = false): HeadersInit {
 
 /**
  * API 요청 함수 (공통)
+ *
+ * 서버 응답 구조:
+ * - Axios response: response
+ * - Server envelope: response.data → { success, message, data }
+ * - 실제 페이로드: response.data.data → { 실제 데이터 }
  */
 async function apiRequest<T>(
     endpoint: string,
     options: RequestInit = {},
     includeAuth: boolean = false
 ): Promise<ApiResponse<T>> {
+
     try {
         const url = `${API_BASE_URL}${endpoint}`;
         const headers = createHeaders(includeAuth);
@@ -126,19 +135,23 @@ async function apiRequest<T>(
             },
         });
 
-        const data = await response.json();
+        const envelope: ServerEnvelope<T> = await response.json();
 
         if (!response.ok) {
             return {
                 success: false,
-                error: data.error || {
-                    code: "UNKNOWN_ERROR",
-                    message: "알 수 없는 오류가 발생했습니다.",
+                error: {
+                    code: "API_ERROR",
+                    message: envelope.message || "알 수 없는 오류가 발생했습니다.",
                 },
             };
         }
 
-        return data;
+        // 서버 envelope에서 실제 데이터 추출
+        return {
+            success: envelope.success,
+            data: envelope.data,
+        };
     } catch (error) {
         console.error("API Request Error:", error);
         return {
@@ -160,12 +173,14 @@ export const productApi = {
     getProducts: async (params?: {
         page?: number;
         limit?: number;
-        sort?: "latest" | "popular" | "price_low" | "price_high";
+        status?: string;
+        search?: string;
     }): Promise<ApiResponse<ProductListResponse>> => {
         const queryParams = new URLSearchParams();
         if (params?.page) queryParams.set("page", params.page.toString());
         if (params?.limit) queryParams.set("limit", params.limit.toString());
-        if (params?.sort) queryParams.set("sort", params.sort);
+        if (params?.status) queryParams.set("status", params.status);
+        if (params?.search) queryParams.set("search", params.search);
 
         const query = queryParams.toString();
         const endpoint = `/products${query ? `?${query}` : ""}`;
@@ -176,7 +191,7 @@ export const productApi = {
     /**
      * 상품 상세 조회
      */
-    getProduct: async (id: number): Promise<ApiResponse<ProductDetail>> => {
+    getProduct: async (id: string): Promise<ApiResponse<ProductDetail>> => {
         return apiRequest<ProductDetail>(`/products/${id}`, { method: "GET" });
     },
 
@@ -216,13 +231,43 @@ export const productApi = {
     /**
      * 상품 삭제
      */
-    deleteProduct: async (id: number): Promise<ApiResponse<{ message: string }>> => {
+    deleteProduct: async (id: string): Promise<ApiResponse<{ message: string }>> => {
         return apiRequest<{ message: string }>(
             `/products/${id}`,
             {
                 method: "DELETE",
             },
             true // 인증 필요
+        );
+    },
+
+    /**
+     * 내가 등록한 상품 목록 조회
+     */
+    getMyProducts: async (): Promise<ApiResponse<Product[]>> => {
+        return apiRequest<Product[]>(
+            "/my-products",
+            {
+                method: "GET",
+            },
+            true // 인증 필요
+        );
+    },
+
+    /**
+     * AI 상품 설명 생성
+     */
+    generateDescription: async (data: {
+        title?: string;
+        price?: number;
+        category?: string;
+    }): Promise<ApiResponse<{ description: string }>> => {
+        return apiRequest<{ description: string }>(
+            "/products/ai/generate-description",
+            {
+                method: "POST",
+                body: JSON.stringify(data),
+            }
         );
     },
 };
@@ -360,7 +405,141 @@ export const authApi = {
 
 export const uploadApi = {
     /**
-     * 이미지 업로드
+     * Presigned URL 받기
+     */
+    getPresignedUrls: async (
+        request: PresignedUrlsRequest
+    ): Promise<ApiResponse<PresignedUrlsResponse>> => {
+        return apiRequest<PresignedUrlsResponse>(
+            "/upload/presigned-urls",
+            {
+                method: "POST",
+                body: JSON.stringify(request),
+            },
+            true // 인증 필요
+        );
+    },
+
+    /**
+     * S3에 파일 업로드
+     */
+    uploadToS3: async (
+        uploadUrl: string,
+        file: File,
+        onProgress?: (progress: number) => void
+    ): Promise<boolean> => {
+        try {
+            return new Promise((resolve, reject) => {
+                const xhr = new XMLHttpRequest();
+
+                // 업로드 진행률 추적
+                if (onProgress) {
+                    xhr.upload.addEventListener("progress", (e) => {
+                        if (e.lengthComputable) {
+                            const progress = (e.loaded / e.total) * 100;
+                            onProgress(progress);
+                        }
+                    });
+                }
+
+                xhr.addEventListener("load", () => {
+                    if (xhr.status === 200) {
+                        resolve(true);
+                    } else {
+                        reject(new Error(`Upload failed with status ${xhr.status}`));
+                    }
+                });
+
+                xhr.addEventListener("error", () => {
+                    reject(new Error("Upload failed"));
+                });
+
+                xhr.open("PUT", uploadUrl);
+                // xhr.setRequestHeader("Content-Type", file.type);
+                xhr.send(file);
+            });
+        } catch (error) {
+            console.error("S3 Upload Error:", error);
+            return false;
+        }
+    },
+
+    /**
+     * 여러 이미지를 순차적으로 업로드
+     */
+    uploadImages: async (
+        files: File[],
+        onProgress?: (current: number, total: number, fileProgress: number) => void
+    ): Promise<ApiResponse<string[]>> => {
+        try {
+            // 1. Presigned URL 받기
+            const presignedRequest: PresignedUrlsRequest = {
+                files: files.map((file) => ({
+                    filename: file.name,
+                    contentType: file.type,
+                })),
+            };
+
+            const presignedResponse = await uploadApi.getPresignedUrls(presignedRequest);
+
+            if (!presignedResponse.success || !presignedResponse.data) {
+                return {
+                    success: false,
+                    error: presignedResponse.error || {
+                        code: "PRESIGNED_URL_ERROR",
+                        message: "Presigned URL을 받아오는데 실패했습니다.",
+                    },
+                };
+            }
+
+            // 2. 각 파일을 S3에 업로드
+            const uploadedKeys: string[] = [];
+
+            for (let i = 0; i < files.length; i++) {
+                const file = files[i];
+                const uploadInfo = presignedResponse.data.uploads[i];
+
+                const success = await uploadApi.uploadToS3(
+                    uploadInfo.uploadUrl,
+                    file,
+                    (fileProgress) => {
+                        if (onProgress) {
+                            onProgress(i + 1, files.length, fileProgress);
+                        }
+                    }
+                );
+
+                if (!success) {
+                    return {
+                        success: false,
+                        error: {
+                            code: "S3_UPLOAD_ERROR",
+                            message: `${file.name} 업로드에 실패했습니다.`,
+                        },
+                    };
+                }
+
+                uploadedKeys.push(uploadInfo.fileUrl);
+            }
+
+            return {
+                success: true,
+                data: uploadedKeys,
+            };
+        } catch (error) {
+            console.error("Images Upload Error:", error);
+            return {
+                success: false,
+                error: {
+                    code: "UPLOAD_ERROR",
+                    message: "이미지 업로드 중 오류가 발생했습니다.",
+                },
+            };
+        }
+    },
+
+    /**
+     * 이미지 업로드 (레거시)
      */
     uploadImage: async (file: File): Promise<ApiResponse<ImageUploadResponse>> => {
         try {
@@ -391,7 +570,11 @@ export const uploadApi = {
                 };
             }
 
-            return data;
+            // 성공 응답을 ApiResponse 형태로 래핑
+            return {
+                success: true,
+                data: data as ImageUploadResponse,
+            };
         } catch (error) {
             console.error("Image Upload Error:", error);
             return {
