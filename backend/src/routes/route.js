@@ -2,9 +2,11 @@ import express from 'express';
 
 import userController from '../controllers/userController.js';
 import productController from '../controllers/productController.js';
+import authController from '../controllers/authController.js';
 
 // middleware
 import isAuthenticated from '../middleware/auth.js';
+import { authenticateToken } from '../middleware/authMiddleware.js';
 
 const router = express.Router();
 
@@ -13,26 +15,28 @@ router.get('/health', (req, res) => {
     res.json({ status: 'ok', message: 'Server is running' });
 });
 
-// Auth routes
-router.post('/auth/signup', userController.signup);
-router.post('/auth/login', userController.login);
-router.post('/auth/logout', isAuthenticated, userController.logout);
+// Auth routes (JWT 기반)
+router.post('/auth/register', authController.register);
+router.post('/auth/login', authController.login);
+router.post('/auth/logout', authenticateToken, authController.logout);
+router.post('/auth/refresh', authController.refreshToken);
+router.get('/auth/me', authenticateToken, authController.getMe);
 
 // User routes
-router.get('/users/profile', isAuthenticated, userController.getProfile);
-router.put('/users/profile', isAuthenticated, userController.updateProfile);
+router.get('/users/profile', authenticateToken, userController.getProfile);
+router.put('/users/profile', authenticateToken, userController.updateProfile);
 
 // Product routes
 router.get('/products', productController.getProductList);
 router.get('/products/:productId', productController.getProductById);
-router.post('/products', isAuthenticated, productController.createProduct);
-router.put('/products/:productId', isAuthenticated, productController.updateProduct);
-router.delete('/products/:productId', isAuthenticated, productController.deleteProduct);
-router.get('/my-products', isAuthenticated, productController.getMyProducts);
+router.post('/products', authenticateToken, productController.createProduct);
+router.put('/products/:productId', authenticateToken, productController.updateProduct);
+router.delete('/products/:productId', authenticateToken, productController.deleteProduct);
+router.get('/my-products', authenticateToken, productController.getMyProducts);
 
 // Product like routes
-router.post('/products/:productId/like', isAuthenticated, productController.likeProduct);
-router.delete('/products/:productId/like', isAuthenticated, productController.unlikeProduct);
+router.post('/products/:productId/like', authenticateToken, productController.likeProduct);
+router.delete('/products/:productId/like', authenticateToken, productController.unlikeProduct);
 
 // TODO: 추가 기능 라우트
 // - AI 상품 설명 자동 생성

@@ -35,12 +35,27 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:4
 // ============ 헬퍼 함수 ============
 
 /**
+ * 로컬 스토리지에서 JWT 토큰 가져오기
+ */
+function getAccessToken(): string | null {
+    if (typeof window === 'undefined') return null;
+    return localStorage.getItem('accessToken');
+}
+
+/**
  * API 요청 헤더 생성
  */
 function createHeaders(): HeadersInit {
     const headers: HeadersInit = {
         "Content-Type": "application/json",
     };
+
+    // JWT 토큰이 있으면 Authorization 헤더에 추가
+    const token = getAccessToken();
+    if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+    }
+
     return headers;
 }
 
@@ -269,32 +284,102 @@ export const authApi = {
      * 로그인
      */
     login: async (data: LoginRequest): Promise<ApiResponse<AuthResponse>> => {
-        return apiRequest<AuthResponse>("/auth/login", {
+        const response = await apiRequest<AuthResponse>("/auth/login", {
             method: "POST",
             body: JSON.stringify(data),
         });
+
+        // 로그인 성공 시 토큰 저장
+        if (response.success && response.data?.data) {
+            const { accessToken, refreshToken } = response.data.data;
+            if (typeof window !== 'undefined') {
+                localStorage.setItem('accessToken', accessToken);
+                localStorage.setItem('refreshToken', refreshToken);
+            }
+        }
+
+        return response;
     },
 
     /**
      * 회원가입
      */
-    signup: async (data: RegisterRequest): Promise<ApiResponse<AuthResponse>> => {
-        return apiRequest<AuthResponse>("/auth/signup", {
+    register: async (data: RegisterRequest): Promise<ApiResponse<AuthResponse>> => {
+        const response = await apiRequest<AuthResponse>("/auth/register", {
             method: "POST",
             body: JSON.stringify(data),
         });
+
+        // 회원가입 성공 시 토큰 저장
+        if (response.success && response.data?.data) {
+            const { accessToken, refreshToken } = response.data.data;
+            if (typeof window !== 'undefined') {
+                localStorage.setItem('accessToken', accessToken);
+                localStorage.setItem('refreshToken', refreshToken);
+            }
+        }
+
+        return response;
     },
 
     /**
      * 로그아웃
      */
     logout: async (): Promise<ApiResponse<{ message: string }>> => {
-        return apiRequest<{ message: string }>(
+        const response = await apiRequest<{ message: string }>(
             "/auth/logout",
             {
                 method: "POST",
             }
         );
+
+        // 로그아웃 시 토큰 삭제
+        if (typeof window !== 'undefined') {
+            localStorage.removeItem('accessToken');
+            localStorage.removeItem('refreshToken');
+        }
+
+        return response;
+    },
+
+    /**
+     * 토큰 갱신
+     */
+    refreshToken: async (): Promise<ApiResponse<{ accessToken: string }>> => {
+        const refreshToken = typeof window !== 'undefined' ? localStorage.getItem('refreshToken') : null;
+
+        if (!refreshToken) {
+            return {
+                success: false,
+                error: {
+                    code: 'NO_REFRESH_TOKEN',
+                    message: '리프레시 토큰이 없습니다.',
+                },
+            };
+        }
+
+        const response = await apiRequest<{ accessToken: string }>("/auth/refresh", {
+            method: "POST",
+            body: JSON.stringify({ refreshToken }),
+        });
+
+        // 토큰 갱신 성공 시 새 액세스 토큰 저장
+        if (response.success && response.data?.data?.accessToken) {
+            if (typeof window !== 'undefined') {
+                localStorage.setItem('accessToken', response.data.data.accessToken);
+            }
+        }
+
+        return response;
+    },
+
+    /**
+     * 내 정보 조회
+     */
+    getMe: async (): Promise<ApiResponse<{ user: User }>> => {
+        return apiRequest<{ user: User }>("/auth/me", {
+            method: "GET",
+        });
     },
 };
 
