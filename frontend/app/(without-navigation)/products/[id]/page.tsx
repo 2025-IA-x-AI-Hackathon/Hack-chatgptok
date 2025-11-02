@@ -1,10 +1,11 @@
 "use client";
 
-import { Heart, Share2, MoreVertical, Eye, Clock, ChevronLeft, Pencil, Trash2, RefreshCw } from "lucide-react";
+import { Heart, Share2, MoreVertical, Eye, Clock, ChevronLeft, Pencil, Trash2, RefreshCw, AlertCircle } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useEffect, use } from "react";
+import ReactMarkdown from "react-markdown";
 import {
     Carousel,
     CarouselContent,
@@ -445,12 +446,43 @@ export default function ProductDetailPage({ params } : {
                 </div>
 
                 {/* 상품 설명 */}
-                <div className="p-4">
+                <div className="p-4 border-b">
                     <h2 className="font-bold mb-2">상품 설명</h2>
                     <p className="whitespace-pre-line text-sm leading-relaxed">
                         {product.description || "설명이 없습니다."}
                     </p>
                 </div>
+
+                {/* AI 하자 설명 */}
+                {productData?.faultDescription?.markdown && (
+                    <div className="p-4 border-b">
+                        <div className="flex items-center gap-2 mb-3">
+                            <AlertCircle className="w-5 h-5 text-amber-600" />
+                            <h2 className="font-bold text-amber-900">AI 하자 분석</h2>
+                        </div>
+                        <div className="text-sm text-amber-800 markdown-content">
+                            <ReactMarkdown
+                                components={{
+                                    h1: ({ children }) => <h1 className="text-xl font-bold text-amber-900 mt-4 mb-2">{children}</h1>,
+                                    h2: ({ children }) => <h2 className="text-lg font-bold text-amber-900 mt-3 mb-2">{children}</h2>,
+                                    h3: ({ children }) => <h3 className="text-base font-bold text-amber-900 mt-2 mb-1">{children}</h3>,
+                                    p: ({ children }) => <p className="mb-2 leading-relaxed">{children}</p>,
+                                    ul: ({ children }) => <ul className="list-disc list-inside mb-2 space-y-1">{children}</ul>,
+                                    ol: ({ children }) => <ol className="list-decimal list-inside mb-2 space-y-1">{children}</ol>,
+                                    li: ({ children }) => <li className="ml-2">{children}</li>,
+                                    strong: ({ children }) => <strong className="font-bold text-amber-900">{children}</strong>,
+                                    em: ({ children }) => <em className="italic">{children}</em>,
+                                    blockquote: ({ children }) => <blockquote className="border-l-4 border-amber-400 pl-3 italic my-2">{children}</blockquote>,
+                                }}
+                            >
+                                {productData.faultDescription.markdown}
+                            </ReactMarkdown>
+                        </div>
+                        <p className="text-xs text-amber-600 mt-3 italic">
+                            * AI가 자동으로 분석한 내용이며, 실제와 다를 수 있습니다.
+                        </p>
+                    </div>
+                )}
             </div>
 
             {/* 하단 고정 버튼 */}

@@ -71,8 +71,13 @@ export interface ProductDetail extends Product {
     seller_created_at: string;
 }
 
+export interface FaultDescription {
+    markdown: string;
+}
+
 export interface ProductDetailResponse {
     isLiked: boolean,
+    faultDescription: FaultDescription,
     product: ProductDetail;
 }
 
