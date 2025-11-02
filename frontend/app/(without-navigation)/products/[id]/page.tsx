@@ -224,6 +224,33 @@ export default function ProductDetailPage({ params } : {
         );
     };
 
+    const handleShare = async () => {
+        if (!product) return;
+
+        const shareData = {
+            title: product.name,
+            text: `${product.name} - ${formatPrice(product.price)}`,
+            url: window.location.href,
+        };
+
+        try {
+            // Web Share API 지원 여부 확인
+            if (navigator.share) {
+                await navigator.share(shareData);
+                toast.success("공유되었습니다.");
+            } else {
+                // 폴백: 클립보드에 URL 복사
+                await navigator.clipboard.writeText(window.location.href);
+                toast.success("링크가 클립보드에 복사되었습니다.");
+            }
+        } catch (error) {
+            // 사용자가 공유를 취소한 경우 등
+            if (error instanceof Error && error.name !== "AbortError") {
+                toast.error("공유에 실패했습니다.");
+            }
+        }
+    };
+
     if (isLoading) {
         return <ProductDetailSkeleton />;
     }
@@ -256,7 +283,10 @@ export default function ProductDetailPage({ params } : {
                         <ChevronLeft className="w-6 h-6" />
                     </button>
                     <div className="flex items-center gap-2">
-                        <button className="p-2 hover:bg-accent rounded-lg transition-colors">
+                        <button
+                            onClick={handleShare}
+                            className="p-2 hover:bg-accent rounded-lg transition-colors"
+                        >
                             <Share2 className="w-5 h-5" />
                         </button>
                         <Sheet open={isMenuOpen} onOpenChange={setIsMenuOpen}>
