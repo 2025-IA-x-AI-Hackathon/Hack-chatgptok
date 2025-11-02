@@ -403,7 +403,7 @@ export default function ProductDetailPage({ params } : {
                 </div>
 
                 {/* 상품 설명 */}
-                <div className="p-4 border-b">
+                <div className="p-4">
                     <h2 className="font-bold mb-2">상품 설명</h2>
                     <p className="whitespace-pre-line text-sm leading-relaxed">
                         {product.description || "설명이 없습니다."}
