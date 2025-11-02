@@ -104,7 +104,7 @@ export interface User {
     member_id: number;
     email: string;
     nickname: string;
-    img?: string;
+    img_url?: string;
     created_at: string;
     updated_at?: string;
 }
@@ -217,7 +217,7 @@ export interface ChatMessage {
 }
 
 export interface CreateChatRoomRequest {
-    product_id: string;
+    productId: string;
 }
 
 export interface SendMessageRequest {

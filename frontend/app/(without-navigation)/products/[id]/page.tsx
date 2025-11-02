@@ -212,7 +212,7 @@ export default function ProductDetailPage({ params } : {
 
     const handleStartChat = () => {
         createChatRoomMutation.mutate(
-            { product_id: id },
+            { productId: id },
             {
                 onSuccess: (chatRoom) => {
                     router.push(`/chat/${chatRoom.room_id}`);
