@@ -22,6 +22,15 @@ import {
 } from '@/lib/chatSocket'
 import { toast } from 'sonner'
 
+// 이미지 URL 포맷팅
+const formatImageUrl = (url: string | undefined) => {
+  if (!url) return undefined;
+  // 이미 http/https로 시작하면 그대로 반환
+  if (url.startsWith('http')) return url;
+  // S3 키를 완전한 S3 URL로 변환
+  return `https://ss-s3-project.s3.ap-northeast-2.amazonaws.com/${url}`;
+};
+
 export default function ChatRoom({
   params,
 }: {
@@ -166,7 +175,7 @@ export default function ChatRoom({
     ? {
         id: chatRoom.other_user_id,
         name: chatRoom.other_user_name,
-        avatar: chatRoom.other_user_img || `https://api.dicebear.com/7.x/avataaars/svg?seed=${chatRoom.other_user_id}`,
+        avatar: formatImageUrl(chatRoom.other_user_img) || `https://api.dicebear.com/7.x/avataaars/svg?seed=${chatRoom.other_user_id}`,
       }
     : null
 
@@ -176,7 +185,7 @@ export default function ChatRoom({
         id: chatRoom.product_id,
         name: chatRoom.product_name,
         price: chatRoom.product_price,
-        thumbnail: chatRoom.product_thumbnail || 'https://placehold.co/400x400/e2e8f0/64748b?text=Product',
+        thumbnail: formatImageUrl(chatRoom.product_thumbnail) || 'https://placehold.co/400x400/e2e8f0/64748b?text=Product',
       }
     : null
 
