@@ -633,8 +633,8 @@ export const chatApi = {
      */
     createOrGetChatRoom: async (
         data: CreateChatRoomRequest
-    ): Promise<ApiResponse<{ data: ChatRoom }>> => {
-        return apiRequest<{ data: ChatRoom }>(
+    ): Promise<ApiResponse<ChatRoom>> => {
+        return apiRequest<ChatRoom>(
             "/chat/rooms",
             {
                 method: "POST",
@@ -692,8 +692,8 @@ export const chatApi = {
     sendMessage: async (
         chatRoomId: string,
         data: SendMessageRequest
-    ): Promise<ApiResponse<{ data: ChatMessage }>> => {
-        return apiRequest<{ data: ChatMessage }>(
+    ): Promise<ApiResponse<ChatMessage>> => {
+        return apiRequest<ChatMessage>(
             `/chat/rooms/${chatRoomId}/messages`,
             {
                 method: "POST",
