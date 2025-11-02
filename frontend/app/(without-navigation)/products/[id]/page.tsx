@@ -309,7 +309,7 @@ export default function ProductDetailPage({ params } : {
                             <CarouselItem>
                                 <div className="relative aspect-square bg-muted">
                                     <iframe
-                                        src="http://kaprpc.iptime.org:5051/v/00000000-0000-4000-8000-000000000001"
+                                        src={`http://kaprpc.iptime.org:5051/v/${product.product_id}`}
                                         className="w-full h-full border-0"
                                         title={`${product.name} - 3D 뷰어`}
                                     />
