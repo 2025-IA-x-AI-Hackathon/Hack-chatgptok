@@ -20,6 +20,7 @@ import {
   sendTypingStatus,
   removeAllListeners
 } from '@/lib/chatSocket'
+import { toast } from 'sonner'
 
 export default function ChatRoom({
   params,
@@ -232,7 +233,7 @@ export default function ChatRoom({
       sendTypingStatus(Number(chatRoomId), false)
     } catch (err) {
       console.error('메시지 전송 오류:', err)
-      alert('메시지 전송 중 오류가 발생했습니다.')
+      toast.error('메시지 전송 중 오류가 발생했습니다.')
     }
   }
 

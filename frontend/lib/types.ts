@@ -55,6 +55,7 @@ export interface Product {
     updated_at: string | null;
     seller_nickname: string;
     seller_img: string;
+    seller_img_url: string;
     thumbnail: string | null;
 }
 
@@ -70,7 +71,13 @@ export interface ProductDetail extends Product {
     seller_created_at: string;
 }
 
+export interface FaultDescription {
+    markdown: string;
+}
+
 export interface ProductDetailResponse {
+    isLiked: boolean,
+    faultDescription: FaultDescription,
     product: ProductDetail;
 }
 
@@ -104,7 +111,7 @@ export interface User {
     member_id: number;
     email: string;
     nickname: string;
-    img?: string;
+    img_url?: string;
     created_at: string;
     updated_at?: string;
 }
@@ -168,6 +175,16 @@ export interface PresignedUrlsResponse {
     expiresIn: number;
 }
 
+// ============ AI 설명 생성 타입 ============
+export interface GenerateDescriptionRequest {
+    s3_path: string;
+    product_name: string;
+}
+
+export interface GenerateDescriptionResponse {
+    description: string;
+}
+
 // ============ 채팅 타입 ============
 export interface ChatRoom {
     room_id: number;
@@ -217,7 +234,7 @@ export interface ChatMessage {
 }
 
 export interface CreateChatRoomRequest {
-    product_id: string;
+    productId: string;
 }
 
 export interface SendMessageRequest {

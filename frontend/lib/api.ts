@@ -39,10 +39,13 @@ import type {
     SendMessageRequest,
     ChatMessage,
     User,
+    GenerateDescriptionRequest,
+    GenerateDescriptionResponse,
 } from "./types";
 
 // API Base URL
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000/api/v1";
+const INSPECT_API_URL = "http://kaprpc.iptime.org:5052";
 
 // ============ 헬퍼 함수 ============
 
@@ -237,7 +240,8 @@ export const productApi = {
             {
                 method: "PUT",
                 body: JSON.stringify(data),
-            }
+            },
+            true
         );
     },
 
@@ -249,7 +253,8 @@ export const productApi = {
             `/products/${id}`,
             {
                 method: "DELETE",
-            }
+            },
+            true
         );
     },
 
@@ -307,7 +312,8 @@ export const likeApi = {
             `/products/${productId}/like`,
             {
                 method: "DELETE",
-            }
+            },
+            true
         );
     },
 };
@@ -571,6 +577,54 @@ export const uploadApi = {
     },
 };
 
+// ============ AI 설명 생성 API ============
+
+export const aiApi = {
+    /**
+     * AI 상품 설명 생성
+     * 첫 번째 이미지로부터 자동으로 상품 설명 생성
+     */
+    generateDescription: async (
+        data: GenerateDescriptionRequest
+    ): Promise<ApiResponse<GenerateDescriptionResponse>> => {
+        try {
+            const response = await fetch(`${INSPECT_API_URL}/inspect/analyze_desc`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify(data),
+            });
+
+            if (!response.ok) {
+                return {
+                    success: false,
+                    error: {
+                        code: "AI_GENERATION_ERROR",
+                        message: "AI 설명 생성에 실패했습니다.",
+                    },
+                };
+            }
+
+            const result: GenerateDescriptionResponse = await response.json();
+
+            return {
+                success: true,
+                data: result,
+            };
+        } catch (error) {
+            console.error("AI Description Generation Error:", error);
+            return {
+                success: false,
+                error: {
+                    code: "NETWORK_ERROR",
+                    message: "네트워크 오류가 발생했습니다.",
+                },
+            };
+        }
+    },
+};
+
 export const chatApi = {
     /**
      * 채팅방 생성 또는 조회
@@ -673,5 +727,6 @@ export default {
     auth: authApi,
     user: userApi,
     upload: uploadApi,
+    ai: aiApi,
     chat: chatApi
 };

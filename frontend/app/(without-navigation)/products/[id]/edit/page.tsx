@@ -399,7 +399,6 @@ export default function EditProductPage({
                                     alt={`상품 이미지 ${index + 1}`}
                                     fill
                                     className="object-cover"
-                                    unoptimized
                                 />
                                 <button
                                     type="button"

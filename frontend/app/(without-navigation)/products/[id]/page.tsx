@@ -1,10 +1,11 @@
 "use client";
 
-import { Heart, Share2, MoreVertical, Eye, Clock, ChevronLeft, Pencil, Trash2, RefreshCw } from "lucide-react";
+import { Heart, Share2, MoreVertical, Eye, Clock, ChevronLeft, Pencil, Trash2, RefreshCw, AlertCircle } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useEffect, use } from "react";
+import ReactMarkdown from "react-markdown";
 import {
     Carousel,
     CarouselContent,
@@ -119,7 +120,7 @@ export default function ProductDetailPage({ params } : {
     const { id } = use(params)
 
 
-    const { data: product, isLoading, error, refetch } = useProduct(id);
+    const { data: productData, isLoading, error, refetch } = useProduct(id);
 
     const deleteProductMutation = useDeleteProduct();
     const addLikeMutation = useAddLike();
@@ -131,7 +132,15 @@ export default function ProductDetailPage({ params } : {
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const [isLiked, setIsLiked] = useState(false);
 
-    // 진행 중인 요청을 추적하여 중복 호출 방지
+    const product = productData?.product;
+    const isLikedFromServer = productData?.isLiked ?? false;
+
+    // 서버에서 받은 좋아요 상태를 로컬 상태에 동기화
+    useEffect(() => {
+        if (productData) {
+            setIsLiked(isLikedFromServer);
+        }
+    }, [productData, isLikedFromServer]);
 
     useEffect(() => {
         if (!carouselApi) {
@@ -187,23 +196,29 @@ export default function ProductDetailPage({ params } : {
     };
 
     const handleLikeToggle = () => {
+        // 낙관적 업데이트 (즉시 UI 변경)
+        const previousLiked = isLiked;
+        setIsLiked(!isLiked);
+
         if (isLiked) {
             removeLikeMutation.mutate(id, {
                 onSuccess: () => {
-                    setIsLiked(false);
                     toast.success("좋아요를 취소했습니다.");
                 },
                 onError: (error) => {
+                    // 실패 시 이전 상태로 복원
+                    setIsLiked(previousLiked);
                     toast.error(error.message || "좋아요 취소에 실패했습니다.");
                 },
             });
         } else {
             addLikeMutation.mutate(id, {
                 onSuccess: () => {
-                    setIsLiked(true);
                     toast.success("좋아요를 눌렀습니다.");
                 },
                 onError: (error) => {
+                    // 실패 시 이전 상태로 복원
+                    setIsLiked(previousLiked);
                     toast.error(error.message || "좋아요에 실패했습니다.");
                 },
             });
@@ -212,7 +227,7 @@ export default function ProductDetailPage({ params } : {
 
     const handleStartChat = () => {
         createChatRoomMutation.mutate(
-            { product_id: id },
+            { productId: id },
             {
                 onSuccess: (chatRoom) => {
                     router.push(`/chat/${chatRoom.room_id}`);
@@ -222,6 +237,33 @@ export default function ProductDetailPage({ params } : {
                 },
             }
         );
+    };
+
+    const handleShare = async () => {
+        if (!product) return;
+
+        const shareData = {
+            title: product.name,
+            text: `${product.name} - ${formatPrice(product.price)}`,
+            url: window.location.href,
+        };
+
+        try {
+            // Web Share API 지원 여부 확인
+            if (navigator.share) {
+                await navigator.share(shareData);
+                toast.success("공유되었습니다.");
+            } else {
+                // 폴백: 클립보드에 URL 복사
+                await navigator.clipboard.writeText(window.location.href);
+                toast.success("링크가 클립보드에 복사되었습니다.");
+            }
+        } catch (error) {
+            // 사용자가 공유를 취소한 경우 등
+            if (error instanceof Error && error.name !== "AbortError") {
+                toast.error("공유에 실패했습니다.");
+            }
+        }
     };
 
     if (isLoading) {
@@ -256,7 +298,10 @@ export default function ProductDetailPage({ params } : {
                         <ChevronLeft className="w-6 h-6" />
                     </button>
                     <div className="flex items-center gap-2">
-                        <button className="p-2 hover:bg-accent rounded-lg transition-colors">
+                        <button
+                            onClick={handleShare}
+                            className="p-2 hover:bg-accent rounded-lg transition-colors"
+                        >
                             <Share2 className="w-5 h-5" />
                         </button>
                         <Sheet open={isMenuOpen} onOpenChange={setIsMenuOpen}>
@@ -326,7 +371,6 @@ export default function ProductDetailPage({ params } : {
                                             className="object-cover"
                                             sizes="100vw"
                                             priority={index === 0}
-                                            unoptimized
                                         />
                                     </div>
                                 </CarouselItem>
@@ -354,11 +398,10 @@ export default function ProductDetailPage({ params } : {
                     <div className="flex items-center gap-3">
                         <div className="relative w-12 h-12 rounded-full overflow-hidden bg-muted">
                             <Image
-                                src={product.seller_img}
+                                src={product.seller_img_url}
                                 alt={product.seller_nickname}
                                 fill
                                 className="object-cover"
-                                unoptimized
                             />
                         </div>
                         <div>
@@ -374,7 +417,7 @@ export default function ProductDetailPage({ params } : {
                     <div className="flex items-center gap-4 text-sm text-muted-foreground">
                         <div className="flex items-center gap-1">
                             <Clock className="w-4 h-4" />
-                            <span>{product.created_at}</span>
+                            <span>{formatDate(product.created_at)}</span>
                         </div>
                         <div className="flex items-center gap-1">
                             <Eye className="w-4 h-4" />
@@ -409,6 +452,37 @@ export default function ProductDetailPage({ params } : {
                         {product.description || "설명이 없습니다."}
                     </p>
                 </div>
+
+                {/* AI 하자 설명 */}
+                {productData?.faultDescription?.markdown && (
+                    <div className="p-4 border-b">
+                        <div className="flex items-center gap-2 mb-3">
+                            <AlertCircle className="w-5 h-5 text-amber-600" />
+                            <h2 className="font-bold text-amber-900">AI 하자 분석</h2>
+                        </div>
+                        <div className="text-sm text-amber-800 markdown-content">
+                            <ReactMarkdown
+                                components={{
+                                    h1: ({ children }) => <h1 className="text-xl font-bold text-amber-900 mt-4 mb-2">{children}</h1>,
+                                    h2: ({ children }) => <h2 className="text-lg font-bold text-amber-900 mt-3 mb-2">{children}</h2>,
+                                    h3: ({ children }) => <h3 className="text-base font-bold text-amber-900 mt-2 mb-1">{children}</h3>,
+                                    p: ({ children }) => <p className="mb-2 leading-relaxed">{children}</p>,
+                                    ul: ({ children }) => <ul className="list-disc list-inside mb-2 space-y-1">{children}</ul>,
+                                    ol: ({ children }) => <ol className="list-decimal list-inside mb-2 space-y-1">{children}</ol>,
+                                    li: ({ children }) => <li className="ml-2">{children}</li>,
+                                    strong: ({ children }) => <strong className="font-bold text-amber-900">{children}</strong>,
+                                    em: ({ children }) => <em className="italic">{children}</em>,
+                                    blockquote: ({ children }) => <blockquote className="border-l-4 border-amber-400 pl-3 italic my-2">{children}</blockquote>,
+                                }}
+                            >
+                                {productData.faultDescription.markdown}
+                            </ReactMarkdown>
+                        </div>
+                        <p className="text-xs text-amber-600 mt-3 italic">
+                            * AI가 자동으로 분석한 내용이며, 실제와 다를 수 있습니다.
+                        </p>
+                    </div>
+                )}
             </div>
 
             {/* 하단 고정 버튼 */}

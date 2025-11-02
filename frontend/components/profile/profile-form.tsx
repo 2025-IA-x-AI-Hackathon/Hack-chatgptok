@@ -51,7 +51,7 @@ export function ProfileForm() {
     resolver: zodResolver(updateProfileSchema),
     values: {
       nickname: user?.nickname || "",
-      img: user?.img || "",
+      img: user?.img_url   || "",
     },
   })
 
@@ -189,7 +189,7 @@ export function ProfileForm() {
     logoutMutation.mutate()
   }
 
-  const currentProfileImage = imagePreview || user?.img || "/placeholder-avatar.jpg"
+  const currentProfileImage = imagePreview || user?.img_url || "/placeholder-avatar.jpg"
 
   // 날짜 포맷팅 함수
   const formatDate = (dateString?: string) => {

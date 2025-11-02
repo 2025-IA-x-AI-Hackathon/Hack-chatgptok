@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronLeft, ImagePlus, X } from "lucide-react";
+import { ChevronLeft, ImagePlus, X, Sparkles, Loader2 } from "lucide-react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useState, useRef } from "react";
@@ -11,6 +11,7 @@ import { productFormSchema, type ProductFormData } from "@/lib/schemas/product";
 import { useCreateProduct } from "@/lib/hooks/use-products";
 import { uploadApi } from "@/lib/api";
 import { UploadProgressModal } from "@/components/upload-progress-modal";
+import { useGenerateDescription } from "@/lib/hooks/use-ai";
 
 interface ImagePreview {
     file: File;
@@ -49,7 +50,10 @@ export default function NewProductPage() {
     });
 
     const createProductMutation = useCreateProduct();
+    const generateDescriptionMutation = useGenerateDescription();
     const priceValue = watch("price");
+    const productName = watch("name");
+    const [isGeneratingDescription, setIsGeneratingDescription] = useState(false);
 
     // 가격 입력 핸들러 - 숫자만 입력받고 천 단위 콤마 추가
     const handlePriceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -73,7 +77,7 @@ export default function NewProductPage() {
         fileInputRef.current?.click();
     };
 
-    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const files = Array.from(e.target.files || []);
 
         if (imageFiles.length + files.length > 50) {
@@ -97,6 +101,11 @@ export default function NewProductPage() {
         if (fileInputRef.current) {
             fileInputRef.current.value = "";
         }
+
+        // 첫 번째 이미지가 추가되고 상품명이 있으면 AI 설명 자동 생성
+        if (imageFiles.length === 0 && files.length > 0 && productName) {
+            await handleGenerateDescription(files[0]);
+        }
     };
 
     const handleImageRemove = (index: number) => {
@@ -108,6 +117,59 @@ export default function NewProductPage() {
         setImageFiles(newImageFiles);
         const imageUrls = newImageFiles.map((img) => img.preview);
         setValue("imageUrls", imageUrls, { shouldValidate: true });
+    };
+
+    // AI 설명 생성 핸들러
+    const handleGenerateDescription = async (file: File) => {
+        if (imageFiles.length == 0) {
+            toast.error("이미지를 먼저 넣어주세요.")
+            return;
+        }
+        if (!productName) {
+            toast.error("상품명을 먼저 입력해주세요.");
+            return;
+        }
+
+        if (isGeneratingDescription) {
+            toast.error("이미 설명을 생성중입니다")
+            return;
+        }
+
+        setIsGeneratingDescription(true);
+        setValue("description", "", { shouldValidate: false }); // 설명 초기화
+
+        try {
+            // 1. 먼저 이미지를 S3에 업로드
+            toast.info("이미지를 업로드하는 중...");
+            const uploadResult = await uploadApi.uploadImages([file]);
+
+            if (!uploadResult.success || !uploadResult.data || uploadResult.data.length === 0) {
+                throw new Error("이미지 업로드에 실패했습니다.");
+            }
+
+            // 2. AI 설명 생성 요청
+            toast.info("AI가 상품 설명을 생성하는 중...");
+            generateDescriptionMutation.mutate(
+                {
+                    s3_path: uploadResult.data[0],
+                    product_name: productName,
+                },
+                {
+                    onSuccess: (data) => {
+                        setValue("description", data.description, { shouldValidate: true });
+                        toast.success("AI가 상품 설명을 생성했습니다!");
+                        setIsGeneratingDescription(false);
+                    },
+                    onError: (error) => {
+                        toast.error(error.message || "AI 설명 생성에 실패했습니다.");
+                        setIsGeneratingDescription(false);
+                    },
+                }
+            );
+        } catch (error) {
+            toast.error(error instanceof Error ? error.message : "AI 설명 생성에 실패했습니다.");
+            setIsGeneratingDescription(false);
+        }
     };
 
     const onSubmit = async (data: ProductFormData) => {
@@ -244,7 +306,6 @@ export default function NewProductPage() {
                                     alt={`상품 이미지 ${index + 1}`}
                                     fill
                                     className="object-cover"
-                                    unoptimized
                                 />
                                 <button
                                     type="button"
@@ -305,14 +366,39 @@ export default function NewProductPage() {
                 </div>
 
                 {/* 설명 */}
-                <div className="p-4 border-b">
-                    <label className="block text-sm font-medium mb-2">설명</label>
-                    <textarea
-                        {...register("description")}
-                        placeholder="상품 설명을 입력하세요"
-                        className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary min-h-[200px] resize-none"
-                        maxLength={2000}
-                    />
+                <div className="p-4">
+                    <div className="flex items-center justify-between mb-2">
+                        <label className="block text-sm font-medium">설명</label>
+                            <button
+                                type="button"
+                                onClick={() => handleGenerateDescription(imageFiles[0].file)}
+                                className="flex items-center gap-1 px-3 py-1 text-xs bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
+                            >
+                                <Sparkles className="w-3 h-3" />
+                                AI 설명 생성
+                            </button>
+                    </div>
+
+                    {/* 로딩 상태 표시 */}
+                    {isGeneratingDescription ? (
+                        <div className="w-full px-3 py-2 border rounded-lg min-h-[200px] bg-muted/30 flex flex-col items-center justify-center gap-3">
+                            <Loader2 className="w-8 h-8 animate-spin text-primary" />
+                            <div className="text-center">
+                                <p className="text-sm font-medium text-primary">AI 설명 생성 중...</p>
+                                <p className="text-xs text-muted-foreground mt-1">
+                                    AI가 이미지를 분석하고 있습니다
+                                </p>
+                            </div>
+                        </div>
+                    ) : (
+                        <textarea
+                            {...register("description")}
+                            placeholder="상품 설명을 입력하세요"
+                            className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary min-h-[200px] resize-none"
+                            maxLength={2000}
+                        />
+                    )}
+
                     <div className="flex items-center justify-between mt-1">
                         {errors.description && (
                             <p className="text-xs text-red-600">{errors.description.message}</p>
@@ -321,6 +407,12 @@ export default function NewProductPage() {
                             {watch("description")?.length || 0}/2000
                         </p>
                     </div>
+
+                    {imageFiles.length === 0 && !isGeneratingDescription && (
+                        <p className="text-sm text-muted-foreground">
+                            💡 이미지와 상품명을 입력하면 AI가 자동으로 설명을 생성해드립니다
+                        </p>
+                    )}
                 </div>
 
                 {/* 등록 버튼 */}
