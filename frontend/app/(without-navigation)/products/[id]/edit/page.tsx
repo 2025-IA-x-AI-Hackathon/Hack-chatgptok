@@ -87,7 +87,7 @@ export default function EditProductPage({
     const { id } = use(params)
     const router = useRouter();
 
-    const { data: product, isLoading, error, refetch } = useProduct(id);
+    const { data, isLoading, error, refetch } = useProduct(id);
     const updateProductMutation = useUpdateProduct(id);
     const [imageFiles, setImageFiles] = useState<ImagePreview[]>([]);
     const fileInputRef = useRef<HTMLInputElement>(null);
@@ -121,23 +121,23 @@ export default function EditProductPage({
     const priceValue = watch("price");
 
     useEffect(() => {
-        if (product) {
-            const imageUrls = product.images.map(img => img.url);
+        if (data?.product) {
+            const imageUrls = data.product.images.map(img => img.url);
             reset({
-                name: product.name,
-                price: product.price.toLocaleString('ko-KR'),
-                description: product.description,
+                name: data.product.name,
+                price: data.product.price.toLocaleString('ko-KR'),
+                description: data.product.description,
                 imageUrls: imageUrls,
                 imageKeys: imageUrls,
             });
             // 기존 이미지를 imageFiles 상태로 설정
-            const existingImages: ImagePreview[] = product.images.map((img) => ({
+            const existingImages: ImagePreview[] = data.product.images.map((img) => ({
                 preview: img.url,
                 isExisting: true,
             }));
             setImageFiles(existingImages);
         }
-    }, [product, reset]);
+    }, [data?.product, reset]);
 
     // 가격 입력 핸들러 - 숫자만 입력받고 천 단위 콤마 추가
     const handlePriceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -315,7 +315,7 @@ export default function EditProductPage({
         );
     }
 
-    if (!product) {
+    if (!data?.product) {
         return (
             <div className="flex flex-col items-center justify-center min-h-screen px-4">
                 <p className="text-lg text-muted-foreground mb-4">상품을 찾을 수 없습니다.</p>
