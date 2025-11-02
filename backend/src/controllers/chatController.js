@@ -1,5 +1,6 @@
 import ChatModel from '../models/chatModel.js';
 import ProductModel from '../models/productModel.js';
+import logger from '../utils/logger.js';
 
 const chatController = {
     // 채팅방 생성 또는 조회
@@ -40,7 +41,7 @@ const chatController = {
                 data: chatRoom
             });
         } catch (error) {
-            console.error('채팅방 생성/조회 오류:', error);
+            logger.error('채팅방 생성/조회 오류', error);
             res.status(500).json({
                 success: false,
                 message: '서버 오류가 발생했습니다.'
@@ -59,7 +60,7 @@ const chatController = {
                 data: chatRooms
             });
         } catch (error) {
-            console.error('채팅방 목록 조회 오류:', error);
+            logger.error('채팅방 목록 조회 오류', error);
             res.status(500).json({
                 success: false,
                 message: '서버 오류가 발생했습니다.'
@@ -87,7 +88,7 @@ const chatController = {
                 data: chatRoom
             });
         } catch (error) {
-            console.error('채팅방 상세 조회 오류:', error);
+            logger.error('채팅방 상세 조회 오류', error);
             res.status(500).json({
                 success: false,
                 message: '서버 오류가 발생했습니다.'
@@ -120,7 +121,7 @@ const chatController = {
                 data: messages
             });
         } catch (error) {
-            console.error('메시지 목록 조회 오류:', error);
+            logger.error('메시지 목록 조회 오류', error);
             res.status(500).json({
                 success: false,
                 message: '서버 오류가 발생했습니다.'
@@ -158,7 +159,7 @@ const chatController = {
                 data: message
             });
         } catch (error) {
-            console.error('메시지 전송 오류:', error);
+            logger.error('메시지 전송 오류', error);
             res.status(500).json({
                 success: false,
                 message: '서버 오류가 발생했습니다.'
@@ -188,7 +189,7 @@ const chatController = {
                 data: { count }
             });
         } catch (error) {
-            console.error('메시지 읽음 처리 오류:', error);
+            logger.error('메시지 읽음 처리 오류', error);
             res.status(500).json({
                 success: false,
                 message: '서버 오류가 발생했습니다.'

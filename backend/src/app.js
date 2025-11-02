@@ -17,6 +17,7 @@ import sessionConfig from './config/session.js';
 import { setupChatSocket } from './socket/chatSocket.js';
 import { setupNotificationSocket } from './socket/notificationSocket.js';
 import swaggerSpecs from './config/swagger.js';
+import logger from './utils/logger.js';
 
 const app = express();
 const httpServer = createServer(app);
@@ -24,7 +25,7 @@ const httpServer = createServer(app);
 // Socket.IO 서버 생성 및 CORS 설정
 const io = new Server(httpServer, {
     cors: {
-        origin: 'http://localhost:3000',
+        origin: ['http://localhost:3000', 'http://52.79.148.54:3000', 'http://scannsell.duckdns.org:3000'],
         credentials: true,
         methods: ['GET', 'POST']
     }
@@ -39,7 +40,7 @@ export { io };
 
 app.use(
     cors({
-        origin: 'http://localhost:3000',
+        origin: ['http://localhost:3000', 'http://52.79.148.54:3000', 'http://scannsell.duckdns.org:3000'],
         credentials: true, // 쿠키 전송을 위해 필요
     }),
 );
@@ -64,7 +65,7 @@ app.use(
         },
     }),
 );
-app.use(timeoutMiddleware);
+// app.use(timeoutMiddleware);
 app.use(dbConnectionMiddleware);
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -80,8 +81,8 @@ app.use('/api/v1', routes);
 // HTTP 서버 시작 (Socket.IO 포함)
 const PORT = process.env.PORT || 8000;
 httpServer.listen(PORT, () => {
-    console.log(`🚀 Server is running on port ${PORT}`);
-    console.log(`🔌 WebSocket server is ready`);
+    logger.info(`Server is running on port ${PORT}`);
+    logger.info('WebSocket server is ready');
 });
 
 export default app;

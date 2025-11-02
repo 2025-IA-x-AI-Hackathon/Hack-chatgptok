@@ -1,4 +1,5 @@
 import { pool } from '../middleware/dbConnection.js';
+import logger from '../utils/logger.js';
 
 const JobModel = {
     // 3DGS Job 생성
@@ -98,15 +99,15 @@ const JobModel = {
 
             if (!response.ok) {
                 const errorText = await response.text();
-                console.error(`[Job] Description API 호출 실패 - productId: ${productId}, status: ${response.status}, error: ${errorText}`);
+                logger.error('[Job] Description API 호출 실패', null, { productId, status: response.status, error: errorText });
                 // 에러를 throw하지 않고 로그만 남김
                 return { success: false, error: errorText };
             }
 
-            console.log(`[Job] Description API 호출 성공 - productId: ${productId}`);
+            logger.info('[Job] Description API 호출 성공', { productId });
             return await response.json();
         } catch (error) {
-            console.error(`[Job] Description API 호출 에러 - productId: ${productId}:`, error);
+            logger.error('[Job] Description API 호출 에러', error, { productId });
             // 에러를 throw하지 않고 로그만 남김
             return { success: false, error: error.message };
         }
@@ -137,15 +138,15 @@ const JobModel = {
 
             if (!response.ok) {
                 const errorText = await response.text();
-                console.error(`[Job] 3DGS API 호출 실패 - productId: ${productId}, status: ${response.status}, error: ${errorText}`);
+                logger.error('[Job] 3DGS API 호출 실패', null, { productId, status: response.status, error: errorText });
                 // 에러를 throw하지 않고 로그만 남김
                 return { success: false, error: errorText };
             }
 
-            console.log(`[Job] 3DGS API 호출 성공 - productId: ${productId}`);
+            logger.info('[Job] 3DGS API 호출 성공', { productId });
             return await response.json();
         } catch (error) {
-            console.error(`[Job] 3DGS API 호출 에러 - productId: ${productId}:`, error);
+            logger.error('[Job] 3DGS API 호출 에러', error, { productId });
             // 에러를 throw하지 않고 로그만 남김
             return { success: false, error: error.message };
         }
@@ -157,7 +158,7 @@ const JobModel = {
             const workerUrl = process.env.WORKER_API_URL;
 
             if (!workerUrl) {
-                console.warn('WORKER_API_URL not configured, skipping worker notification');
+                logger.warn('WORKER_API_URL not configured, skipping worker notification');
                 return;
             }
 
@@ -179,12 +180,12 @@ const JobModel = {
             });
 
             if (!response.ok) {
-                console.error(`Failed to notify worker for ${jobType} job:`, response.statusText);
+                logger.error('Failed to notify worker', null, { jobType, productId, status: response.statusText });
             } else {
-                console.log(`Worker notified successfully for ${jobType} job: ${productId}`);
+                logger.info('Worker notified successfully', { jobType, productId });
             }
         } catch (error) {
-            console.error(`Error notifying worker for ${jobType} job:`, error.message);
+            logger.error('Error notifying worker', error, { jobType, productId });
             // 워커 알림 실패는 Job 생성을 실패시키지 않음
         }
     },

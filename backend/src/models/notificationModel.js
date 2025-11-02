@@ -133,7 +133,7 @@ const NotificationModel = {
     isValidType(type) {
         const validTypes = [
             'CHAT_MESSAGE',
-            'PRODUCT_LIKE',
+            'likes',
             'PRODUCT_SOLD',
             'JOB_COMPLETED',
             'FAULT_ANALYSIS',

@@ -1,5 +1,6 @@
 import NotificationModel from '../models/notificationModel.js';
 import { authenticateSocket } from './chatSocket.js';
+import logger from '../utils/logger.js';
 
 /**
  * 알림 Socket.IO 이벤트 핸들러
@@ -14,7 +15,7 @@ export const setupNotificationSocket = (io) => {
                 const userRoom = `user:${socket.memberId}`;
                 socket.join(userRoom);
 
-                console.log(`사용자 ${socket.memberId}가 알림 룸에 입장`);
+                logger.info('사용자가 알림 룸에 입장', { memberId: socket.memberId });
 
                 // 입장 성공 알림 및 현재 읽지 않은 개수 전송
                 const unreadCount = await NotificationModel.getUnreadCount(socket.memberId);
@@ -23,7 +24,7 @@ export const setupNotificationSocket = (io) => {
                     unread_count: unreadCount
                 });
             } catch (error) {
-                console.error('알림 룸 입장 오류:', error);
+                logger.error('알림 룸 입장 오류', error);
                 socket.emit('error', { message: '알림 룸 입장 중 오류가 발생했습니다.' });
             }
         });
@@ -53,9 +54,9 @@ export const setupNotificationSocket = (io) => {
                 const unreadCount = await NotificationModel.getUnreadCount(socket.memberId);
                 socket.emit('unread-count-updated', { count: unreadCount });
 
-                console.log(`알림 읽음 처리: 사용자 ${socket.memberId}, 알림 ${notifId}`);
+                logger.info('알림 읽음 처리', { memberId: socket.memberId, notifId });
             } catch (error) {
-                console.error('알림 읽음 처리 오류:', error);
+                logger.error('알림 읽음 처리 오류', error);
                 socket.emit('error', { message: '알림 읽음 처리 중 오류가 발생했습니다.' });
             }
         });
@@ -69,9 +70,9 @@ export const setupNotificationSocket = (io) => {
                 const unreadCount = await NotificationModel.getUnreadCount(socket.memberId);
                 socket.emit('unread-count-updated', { count: unreadCount });
 
-                console.log(`전체 알림 읽음 처리: 사용자 ${socket.memberId}, ${count}개 알림`);
+                logger.info('전체 알림 읽음 처리', { memberId: socket.memberId, count });
             } catch (error) {
-                console.error('전체 알림 읽음 처리 오류:', error);
+                logger.error('전체 알림 읽음 처리 오류', error);
                 socket.emit('error', { message: '전체 알림 읽음 처리 중 오류가 발생했습니다.' });
             }
         });
@@ -99,7 +100,7 @@ export const sendNotification = async (io, memberId, notificationData) => {
 
         // 알림 타입 검증
         if (!NotificationModel.isValidType(type)) {
-            console.error(`유효하지 않은 알림 타입: ${type}`);
+            logger.error('유효하지 않은 알림 타입', { type });
             return null;
         }
 
@@ -129,11 +130,11 @@ export const sendNotification = async (io, memberId, notificationData) => {
         const unreadCount = await NotificationModel.getUnreadCount(memberId);
         io.to(`user:${memberId}`).emit('unread-count-updated', { count: unreadCount });
 
-        console.log(`알림 전송 완료: 사용자 ${memberId}, 타입 ${type}`);
+        logger.info('알림 전송 완료', { memberId, type });
 
         return enrichedNotification;
     } catch (error) {
-        console.error('알림 전송 오류:', error);
+        logger.error('알림 전송 오류', error);
         return null;
     }
 };

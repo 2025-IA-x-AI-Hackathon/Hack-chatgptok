@@ -256,7 +256,7 @@ const ProductModel = {
 
             // 이미 좋아요했는지 확인
             const [existing] = await connection.query(
-                'SELECT * FROM product_like WHERE product_id = ? AND member_id = ?',
+                'SELECT * FROM likes WHERE product_id = ? AND member_id = ?',
                 [productId, memberId]
             );
 
@@ -265,10 +265,10 @@ const ProductModel = {
                 return { success: false, reason: 'already_liked' };
             }
 
-            // product_like 테이블에 추가
+            // likes 테이블에 추가
             const now = new Date();
             await connection.query(
-                'INSERT INTO product_like (product_id, member_id, created_at) VALUES (?, ?, ?)',
+                'INSERT INTO likes (product_id, member_id, created_at) VALUES (?, ?, ?)',
                 [productId, memberId, now]
             );
 
@@ -296,7 +296,7 @@ const ProductModel = {
 
             // 좋아요 존재 확인
             const [existing] = await connection.query(
-                'SELECT * FROM product_like WHERE product_id = ? AND member_id = ?',
+                'SELECT * FROM likes WHERE product_id = ? AND member_id = ?',
                 [productId, memberId]
             );
 
@@ -305,9 +305,9 @@ const ProductModel = {
                 return { success: false, reason: 'not_liked' };
             }
 
-            // product_like 테이블에서 삭제
+            // likes 테이블에서 삭제
             await connection.query(
-                'DELETE FROM product_like WHERE product_id = ? AND member_id = ?',
+                'DELETE FROM likes WHERE product_id = ? AND member_id = ?',
                 [productId, memberId]
             );
 
@@ -329,7 +329,7 @@ const ProductModel = {
 
     // 좋아요 여부 확인
     async isLiked(productId, memberId) {
-        const query = 'SELECT * FROM product_like WHERE product_id = ? AND member_id = ?';
+        const query = 'SELECT * FROM likes WHERE product_id = ? AND member_id = ?';
         const [rows] = await pool.query(query, [productId, memberId]);
 
         return rows.length > 0;

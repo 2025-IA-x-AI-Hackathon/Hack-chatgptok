@@ -2,6 +2,7 @@ import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import path from 'path';
 import crypto from 'crypto';
+import logger from '../utils/logger.js';
 
 // S3 클라이언트 초기화
 const s3Client = new S3Client({
@@ -19,7 +20,7 @@ const UploadController = {
             const { filename, contentType } = req.query;
 
             if (!filename || !contentType) {
-                console.log('[Upload] filename 또는 contentType이 없습니다');
+                logger.warn('[Upload] filename 또는 contentType이 없습니다');
                 return res
                     .status(400)
                     .json({ error: 'filename and contentType are required' });
@@ -36,7 +37,7 @@ const UploadController = {
             ];
 
             if (!allowedTypes.includes(contentType)) {
-                console.log('[Upload] 지원하지 않는 파일 형식입니다');
+                logger.warn('[Upload] 지원하지 않는 파일 형식입니다', { contentType });
                 return res
                     .status(400)
                     .json({ error: 'Only image files are allowed' });
@@ -62,7 +63,7 @@ const UploadController = {
 
             const fileUrl = `https://${process.env.AWS_BUCKET_NAME}.s3.${process.env.AWS_REGION}.amazonaws.com/${key}`;
 
-            console.log('[Upload] 단일 파일 업로드 성공 - 파일명:', filename, '파일 URL:', fileUrl);
+            logger.info('[Upload] 단일 파일 업로드 성공', { filename, fileUrl });
 
             const uploadResponse = {
                 uploadUrl,
@@ -76,7 +77,7 @@ const UploadController = {
                 data: uploadResponse,
             });
         } catch (error) {
-            console.error('[Upload] 단일 파일 업로드 오류:', error);
+            logger.error('[Upload] 단일 파일 업로드 오류', error);
             res.status(500).json({
                 success: false,
                 message: error.message,
@@ -90,7 +91,7 @@ const UploadController = {
             const { files } = req.body; // [{ filename, contentType }]
 
             if (!files || !Array.isArray(files) || files.length === 0) {
-                console.log('[Upload] files 배열이 없습니다');
+                logger.warn('[Upload] files 배열이 없습니다');
                 return res
                     .status(400)
                     .json({
@@ -100,7 +101,7 @@ const UploadController = {
             }
 
             if (files.length > 50) {
-                console.log('[Upload] 최대 50개의 파일만 허용됩니다');
+                logger.warn('[Upload] 최대 50개의 파일만 허용됩니다', { fileCount: files.length });
                 return res
                     .status(400)
                     .json({
@@ -124,7 +125,7 @@ const UploadController = {
                     const { filename, contentType } = file;
 
                     if (!filename || !contentType) {
-                        console.log('[Upload] 각 파일에는 filename과 contentType이 필요합니다');
+                        logger.warn('[Upload] 각 파일에는 filename과 contentType이 필요합니다');
                         return res.status(400).json({
                             success: false,
                             message: '각 파일에는 filename과 contentType이 필요합니다',
@@ -132,7 +133,7 @@ const UploadController = {
                     }
 
                     if (!allowedTypes.includes(contentType)) {
-                        console.log('[Upload] 지원하지 않는 파일 형식입니다');
+                        logger.warn('[Upload] 지원하지 않는 파일 형식입니다', { contentType });
                         return res.status(400).json({
                             success: false,
                             message: `지원하지 않는 파일 형식입니다: ${contentType}`,
@@ -176,7 +177,10 @@ const UploadController = {
                 expiresIn: 900,
             };
 
-            console.log('[Upload] 여러 파일 업로드 성공 - 파일명:', files.map((file) => file.filename), '파일 URL:', uploadData.map((file) => file.fileUrl));
+            logger.info('[Upload] 여러 파일 업로드 성공', {
+                filenames: files.map((file) => file.filename),
+                fileUrls: uploadData.map((file) => file.fileUrl)
+            });
 
             res.status(200).json({
                 success: true,
@@ -184,7 +188,7 @@ const UploadController = {
                 data: uploadResponse,
             });
         } catch (error) {
-            console.error('[Upload] 여러 파일 업로드 오류:', error);
+            logger.error('[Upload] 여러 파일 업로드 오류', error);
             res.status(500).json({
                 success: false,
                 message: error.message,

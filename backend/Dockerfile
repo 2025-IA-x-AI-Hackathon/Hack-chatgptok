@@ -18,6 +18,10 @@ COPY --from=deps /usr/src/app/node_modules ./node_modules
 # Copy application code
 COPY --chown=nodejs:nodejs . .
 
+# Create logs directory with proper permissions
+RUN mkdir -p /usr/src/app/logs && \
+    chown -R nodejs:nodejs /usr/src/app/logs
+
 # Switch to non-root user
 USER nodejs
 
