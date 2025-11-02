@@ -209,7 +209,9 @@ export const productApi = {
      * 상품 상세 조회
      */
     getProduct: async (id: string): Promise<ApiResponse<ProductDetailResponse>> => {
-        return apiRequest<ProductDetailResponse>(`/products/${id}`, { method: "GET" });
+        // 로그인한 사용자의 경우 좋아요 여부 확인을 위해 토큰 전송
+        const token = getAccessToken();
+        return apiRequest<ProductDetailResponse>(`/products/${id}`, { method: "GET" }, !!token);
     },
 
     /**

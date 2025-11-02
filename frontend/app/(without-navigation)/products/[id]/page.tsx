@@ -523,12 +523,16 @@ export default function ProductDetailPage({ params } : {
                         disabled={addLikeMutation.isPending || removeLikeMutation.isPending}
                         className={`p-3 rounded-lg border transition-colors ${
                             isLiked
-                                ? "bg-rose-50 border-rose-200 text-rose-500"
+                                ? "bg-rose-50 border-rose-200"
                                 : "hover:bg-accent"
                         } disabled:opacity-50 disabled:cursor-not-allowed`}
                     >
                         <Heart
-                            className={`w-6 h-6 ${isLiked ? "fill-current" : ""}`}
+                            className={`w-6 h-6 transition-all ${
+                                isLiked
+                                    ? "fill-rose-500 text-rose-500"
+                                    : "fill-none text-gray-600"
+                            }`}
                         />
                     </button>
                     <button
