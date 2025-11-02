@@ -1,6 +1,6 @@
 "use client";
 
-import { Heart, Plus, RefreshCw, Loader2, Eye } from "lucide-react";
+import { Heart, Plus, RefreshCw, Loader2, Eye, Clock } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
 import { useInfiniteProducts } from "@/lib/hooks/use-products";
@@ -12,6 +12,22 @@ import { Product } from "@/lib/types";
 // 가격 포맷 함수
 const formatPrice = (price: number) => {
     return new Intl.NumberFormat("ko-KR").format(price) + "원";
+};
+
+// 날짜 포맷 함수
+const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
+
+    if (diffMins < 1) return "방금 전";
+    if (diffMins < 60) return `${diffMins}분 전`;
+    if (diffHours < 24) return `${diffHours}시간 전`;
+    if (diffDays < 7) return `${diffDays}일 전`;
+    return date.toLocaleDateString("ko-KR");
 };
 
 // 상품 아이템 Skeleton 컴포넌트
@@ -92,6 +108,9 @@ function ProductItem({ product }: { product: Product }) {
                         <h3 className="text-lg font-medium line-clamp-2 group-hover:text-primary transition-colors">
                             {product.name}
                         </h3>
+                        <p className="text-sm text-muted-foreground mt-1">
+                            {formatDate(product.created_at)}
+                        </p>
                     </div>
                     <div className="flex items-end justify-between">
                         <p className="text-xl font-bold">
