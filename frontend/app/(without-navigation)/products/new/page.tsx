@@ -120,9 +120,9 @@ export default function NewProductPage() {
     };
 
     // AI 설명 생성 핸들러
-    const handleGenerateDescription = async (file: File) => {
-        if (imageFiles.length == 0) {
-            toast.error("이미지를 먼저 넣어주세요.")
+    const handleGenerateDescription = async (file?: File) => {
+        if (!file || imageFiles.length === 0) {
+            toast.error("이미지를 먼저 넣어주세요.");
             return;
         }
         if (!productName) {
@@ -131,7 +131,7 @@ export default function NewProductPage() {
         }
 
         if (isGeneratingDescription) {
-            toast.error("이미 설명을 생성중입니다")
+            toast.error("이미 설명을 생성중입니다");
             return;
         }
 
@@ -151,7 +151,7 @@ export default function NewProductPage() {
             toast.info("AI가 상품 설명을 생성하는 중...");
             generateDescriptionMutation.mutate(
                 {
-                    s3_path: uploadResult.data[0],
+                    s3_path: `s3://ss-s3-project/${uploadResult.data[0]}`,
                     product_name: productName,
                 },
                 {
@@ -371,7 +371,7 @@ export default function NewProductPage() {
                         <label className="block text-sm font-medium">설명</label>
                             <button
                                 type="button"
-                                onClick={() => handleGenerateDescription(imageFiles[0].file)}
+                                onClick={() => handleGenerateDescription(imageFiles[0]?.file)}
                                 className="flex items-center gap-1 px-3 py-1 text-xs bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
                             >
                                 <Sparkles className="w-3 h-3" />
