@@ -6,9 +6,40 @@
 ![Python](https://img.shields.io/badge/Python-3.11+-3776AB?style=flat-square&logo=python)
 
 **Hack-chatgptok**은 2025 IA x AI 해커톤에서 개발된 **AI 기반 스마트 중고 거래 플랫폼**입니다. 
-상품을 촬영하면 자동으로 설명과 3D 모델을 생성하는 플랫폼입니다.
+상품을 촬영하면 자동으로 설명과 3D 모델을 생성하는 혁신적인 플랫폼입니다.
 
 > 사진 한 장으로 시작하는 스마트한 중고 거래!
+
+---
+
+## 기능 데모
+
+### 상품 목록 페이지
+사용자는 등록된 중고 상품들을 한눈에 볼 수 있는 그리드 형식의 목록 페이지에서:
+- 상품을 카테고리별로 필터링
+- 가격대별 검색
+- 지역별 상품 조회
+- 관심 상품(위시리스트) 저장
+
+<video width="100%" controls style="max-width: 800px; border-radius: 8px; margin: 20px 0;">
+  <source src="./docs/상품_목록.mov" type="video/quicktime">
+  <p>상품 목록 데모 영상입니다. 브라우저에서 지원하지 않으면 <a href="./docs/상품%20목록.mov">여기를 클릭</a>하여 다운로드하세요.</p>
+</video>
+
+### 상품 상세 페이지
+개별 상품을 클릭하면 상세한 정보를 확인할 수 있습니다:
+- 다중 이미지 갤러리
+- AI가 생성한 상품 설명
+- 판매자 정보 및 평점
+- 판매자와 실시간 채팅
+- 3D 모델 뷰어 (Gaussian Splatting)
+
+<video width="100%" controls style="max-width: 800px; border-radius: 8px; margin: 20px 0;">
+  <source src="./docs/상품_상세.mov" type="video/quicktime">
+  <p>상품 상세 데모 영상입니다. 브라우저에서 지원하지 않으면 <a href="./docs/상품%20상세.mov">여기를 클릭</a>하여 다운로드하세요.</p>
+</video>
+
+---
 
 ## 프로젝트 개요
 
@@ -17,14 +48,17 @@
 - **이미지 기반 상품 분석**: 상품 사진으로부터 자동 설명 생성 (Google Gemini AI)
 - **3D 모델 생성**: Gaussian Splatting을 활용한 3D 시각화
 - **실시간 채팅**: WebSocket 기반 구매자-판매자 실시간 소통
+- **위시리스트**: 관심 상품 저장 및 관리
 - **보안 인증**: JWT 토큰 기반 사용자 인증
 - **클라우드 스토리지**: AWS S3 이미지 호스팅
+- **반응형 디자인**: 모바일/태블릿/데스크톱 최적화
+- **다크모드**: 자동 테마 전환 지원
 
 ## 프로젝트 구조
 
 ```
 Hack-chatgptok/
-├── 📁 frontend/              # React/Next.js 프론트엔드
+├── frontend/              # React/Next.js 프론트엔드
 │   ├── app/                 # Next.js App Router
 │   ├── components/          # React 컴포넌트
 │   ├── lib/                 # API 클라이언트, 타입 정의
@@ -32,7 +66,7 @@ Hack-chatgptok/
 │   ├── Dockerfile           # 프론트엔드 Docker 이미지
 │   └── package.json         # 의존성 관리
 │
-├── 📁 backend/               # Express.js REST API
+├── backend/               # Express.js REST API
 │   ├── src/
 │   │   ├── app.js           # Express 앱 설정
 │   │   ├── controllers/     # 비즈니스 로직
@@ -48,7 +82,7 @@ Hack-chatgptok/
 │   ├── Makefile             # Docker 명령어
 │   └── package.json
 │
-├── 📁 description_ai/        # 상품 설명 생성 (Google Gemini)
+├── description_ai/        # 상품 설명 생성 (Google Gemini)
 │   ├── app/
 │   │   ├── api/             # FastAPI 라우트
 │   │   ├── services/        # AI 처리 로직
@@ -57,7 +91,7 @@ Hack-chatgptok/
 │   ├── main.py              # 애플리케이션 진입점
 │   └── requirements.txt      # Python 의존성
 │
-├── 📁 gaussian_ai/           # 3D 모델 생성 (Gaussian Splatting)
+├── gaussian_ai/           # 3D 모델 생성 (Gaussian Splatting)
 │   ├── app/
 │   │   ├── api/             # FastAPI 라우트
 │   │   ├── core/            # 3D 처리 로직
@@ -69,9 +103,9 @@ Hack-chatgptok/
 │   ├── main.py              # 애플리케이션 진입점
 │   └── requirements.txt      # Python 의존성
 │
-├── 📄 init.sql              # 데이터베이스 초기화
-├── 📄 sample_data.sql       # 테스트 데이터
-└── 📄 README.md             # 본 파일
+├── init.sql              # 데이터베이스 초기화
+├── sample_data.sql       # 테스트 데이터
+└── README.md             # 본 파일
 ```
 
 ## 기술 스택
