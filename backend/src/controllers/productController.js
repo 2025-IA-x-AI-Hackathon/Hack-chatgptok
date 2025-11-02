@@ -217,12 +217,26 @@ const ProductController = {
                 }
             }
 
+            // Fault Description 조회
+            let faultDescription = null;
+            try {
+                const [descRows] = await pool.query(
+                    'SELECT * FROM fault_description WHERE product_id = ?',
+                    [productId]
+                );
+                faultDescription = descRows.length > 0 ? descRows[0] : null;
+            } catch (error) {
+                logger.error('[Product] Fault Description 조회 실패', error, { productId });
+                faultDescription = null;
+            }
+
             res.status(200).json({
                 success: true,
                 message: '상품 조회에 성공했습니다.',
                 data: {
                     product,
                     isLiked,
+                    faultDescription,
                 },
             });
         } catch (error) {
