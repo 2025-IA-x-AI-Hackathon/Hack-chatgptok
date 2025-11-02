@@ -131,6 +131,7 @@ export default function ProductDetailPage({ params } : {
     const [currentImageIndex, setCurrentImageIndex] = useState(0);
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const [isLiked, setIsLiked] = useState(false);
+    const [viewMode, setViewMode] = useState<'3D' | '2D'>('3D');
 
     const product = productData?.product;
     const isLikedFromServer = productData?.isLiked ?? false;
@@ -348,40 +349,43 @@ export default function ProductDetailPage({ params } : {
             <div className="pt-14 max-w-7xl mx-auto">
                 {/* 상품 이미지 갤러리 */}
                 <div className="relative">
-                    <Carousel setApi={setCarouselApi} className="w-full">
-                        <CarouselContent>
-                            {/* 3D 뷰어 */}
-                            <CarouselItem>
-                                <div className="relative aspect-square bg-muted">
-                                    <iframe
-                                        src={`http://kaprpc.iptime.org:5051/v/${product.product_id}`}
-                                        className="w-full h-full border-0"
-                                        title={`${product.name} - 3D 뷰어`}
-                                    />
-                                </div>
-                            </CarouselItem>
-                            {/* 상품 이미지들 */}
-                            {product?.images?.map((image, index) => (
-                                <CarouselItem key={image.image_id}>
-                                    <div className="relative aspect-square bg-muted">
-                                        <Image
-                                            src={image.url}
-                                            alt={`${product.name} - 이미지 ${index + 1}`}
-                                            fill
-                                            className="object-cover"
-                                            sizes="100vw"
-                                            priority={index === 0}
-                                        />
-                                    </div>
-                                </CarouselItem>
-                            ))}
-                        </CarouselContent>
-                    </Carousel>
+                    {viewMode === '3D' ? (
+                        // 3D 뷰어
+                        <div className="relative aspect-square bg-muted">
+                            <iframe
+                                src={`http://kaprpc.iptime.org:5051/v/${product.product_id}`}
+                                className="w-full h-full border-0"
+                                title={`${product.name} - 3D 뷰어`}
+                            />
+                        </div>
+                    ) : (
+                        // 2D 이미지 캐러셀
+                        <>
+                            <Carousel setApi={setCarouselApi} className="w-full">
+                                <CarouselContent>
+                                    {product?.images?.map((image, index) => (
+                                        <CarouselItem key={image.image_id}>
+                                            <div className="relative aspect-square bg-muted">
+                                                <Image
+                                                    src={image.url}
+                                                    alt={`${product.name} - 이미지 ${index + 1}`}
+                                                    fill
+                                                    className="object-cover"
+                                                    sizes="100vw"
+                                                    priority={index === 0}
+                                                />
+                                            </div>
+                                        </CarouselItem>
+                                    ))}
+                                </CarouselContent>
+                            </Carousel>
 
-                    {/* 이미지 카운터 뱃지 (우측 하단) */}
-                    <div className="absolute bottom-4 right-4 bg-black/60 text-white text-sm px-3 py-1.5 rounded-full backdrop-blur-sm">
-                        {currentImageIndex + 1} / {(product.images?.length || 0) + 1}
-                    </div>
+                            {/* 이미지 카운터 뱃지 (우측 하단) */}
+                            <div className="absolute bottom-4 right-4 bg-black/60 text-white text-sm px-3 py-1.5 rounded-full backdrop-blur-sm">
+                                {currentImageIndex + 1} / {product.images?.length || 0}
+                            </div>
+                        </>
+                    )}
 
                     {/* 3DGS 작업 상태 표시 */}
                     {/* {product.job_3dgs && product.job_3dgs.status !== 'DONE' && (
@@ -391,6 +395,32 @@ export default function ProductDetailPage({ params } : {
                             {product.job_3dgs.status === 'FAILED' && '3D 처리 실패'}
                         </div>
                     )} */}
+                </div>
+
+                {/* 3D/2D 토글 버튼 */}
+                <div className="pt-3 bg-background">
+                    <div className="inline-flex w-full bg-muted rounded-lg p-1">
+                        <button
+                            onClick={() => setViewMode('3D')}
+                            className={`flex-1 py-2 px-4 rounded-md font-medium transition-all ${
+                                viewMode === '3D'
+                                    ? 'bg-background text-foreground shadow-sm'
+                                    : 'text-muted-foreground hover:text-foreground'
+                            }`}
+                        >
+                            3D 이미지
+                        </button>
+                        <button
+                            onClick={() => setViewMode('2D')}
+                            className={`flex-1 py-2 px-4 rounded-md font-medium transition-all ${
+                                viewMode === '2D'
+                                    ? 'bg-background text-foreground shadow-sm'
+                                    : 'text-muted-foreground hover:text-foreground'
+                            }`}
+                        >
+                            2D 이미지
+                        </button>
+                    </div>
                 </div>
 
                 {/* 판매자 정보 */}
