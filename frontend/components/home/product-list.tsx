@@ -7,6 +7,7 @@ import { useInfiniteProducts } from "@/lib/hooks/use-products";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useEffect, useRef } from "react";
 import { useState } from "react";
+import { Product } from "@/lib/types";
 
 // 가격 포맷 함수
 const formatPrice = (price: number) => {
@@ -33,7 +34,7 @@ function ProductItemSkeleton() {
 }
 
 // 개별 상품 아이템 컴포넌트 (Intersection Observer 적용)
-function ProductItem({ product }: { product: any }) {
+function ProductItem({ product }: { product: Product }) {
     const [isVisible, setIsVisible] = useState(false);
     const itemRef = useRef<HTMLDivElement>(null);
 
@@ -73,7 +74,7 @@ function ProductItem({ product }: { product: any }) {
                 <div className="relative w-40 h-40 shrink-0 overflow-hidden rounded-lg bg-muted">
                     {isVisible ? (
                         <iframe
-                            src="http://kaprpc.iptime.org:5051/v/rotate/00000000-0000-4000-8000-000000000001"
+                            src={`http://kaprpc.iptime.org:5051/v/rotate/${product.product_id}`}
                             className="w-full h-full border-0"
                             title={product.name}
                             loading="lazy"

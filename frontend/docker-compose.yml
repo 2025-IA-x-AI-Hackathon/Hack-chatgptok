@@ -1,0 +1,24 @@
+services:
+  web:
+    container_name: nextjs-web
+    build:
+      context: .
+      dockerfile: Dockerfile
+      # 최종 실행 이미지를 확실히 사용하려면 target 지정
+      target: runner
+    image: nextjs-app:latest
+    env_file:
+      - .env
+    environment:
+      # .env에서 못 찾으면 기본값 사용
+      NODE_ENV: ${NODE_ENV:-production}
+      PORT: ${PORT:-3000}
+      HOSTNAME: 0.0.0.0
+      # Next.js에서 클라이언트로 노출되는 값들은 NEXT_PUBLIC_* 로 전달
+      NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL:-http://localhost:${APP_PORT:-3000}}
+      # 필요 시 추가 (예: S3, Analytics 등)
+      # NEXT_PUBLIC_SOME_KEY: ${NEXT_PUBLIC_SOME_KEY}
+    ports:
+      - "${APP_PORT:-3000}:3000"
+    restart: unless-stopped
+  
