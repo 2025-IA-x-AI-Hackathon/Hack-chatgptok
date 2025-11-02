@@ -119,7 +119,7 @@ export default function ProductDetailPage({ params } : {
     const { id } = use(params)
 
 
-    const { data: product, isLoading, error, refetch } = useProduct(id);
+    const { data: productData, isLoading, error, refetch } = useProduct(id);
 
     const deleteProductMutation = useDeleteProduct();
     const addLikeMutation = useAddLike();
@@ -131,7 +131,15 @@ export default function ProductDetailPage({ params } : {
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const [isLiked, setIsLiked] = useState(false);
 
-    // 진행 중인 요청을 추적하여 중복 호출 방지
+    const product = productData?.product;
+    const isLikedFromServer = productData?.isLiked ?? false;
+
+    // 서버에서 받은 좋아요 상태를 로컬 상태에 동기화
+    useEffect(() => {
+        if (productData) {
+            setIsLiked(isLikedFromServer);
+        }
+    }, [productData, isLikedFromServer]);
 
     useEffect(() => {
         if (!carouselApi) {
@@ -187,23 +195,29 @@ export default function ProductDetailPage({ params } : {
     };
 
     const handleLikeToggle = () => {
+        // 낙관적 업데이트 (즉시 UI 변경)
+        const previousLiked = isLiked;
+        setIsLiked(!isLiked);
+
         if (isLiked) {
             removeLikeMutation.mutate(id, {
                 onSuccess: () => {
-                    setIsLiked(false);
                     toast.success("좋아요를 취소했습니다.");
                 },
                 onError: (error) => {
+                    // 실패 시 이전 상태로 복원
+                    setIsLiked(previousLiked);
                     toast.error(error.message || "좋아요 취소에 실패했습니다.");
                 },
             });
         } else {
             addLikeMutation.mutate(id, {
                 onSuccess: () => {
-                    setIsLiked(true);
                     toast.success("좋아요를 눌렀습니다.");
                 },
                 onError: (error) => {
+                    // 실패 시 이전 상태로 복원
+                    setIsLiked(previousLiked);
                     toast.error(error.message || "좋아요에 실패했습니다.");
                 },
             });

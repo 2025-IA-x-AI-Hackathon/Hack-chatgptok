@@ -72,6 +72,7 @@ export interface ProductDetail extends Product {
 }
 
 export interface ProductDetailResponse {
+    isLiked: boolean,
     product: ProductDetail;
 }
 

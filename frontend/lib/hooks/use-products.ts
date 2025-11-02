@@ -76,8 +76,8 @@ export function useProduct(id: string) {
       if (!response.success || !response.data) {
         throw new Error(response.error?.message || "상품을 불러오는데 실패했습니다")
       }
-      // API 응답 구조: { success, message, data: { product: {...} } }
-      return response.data.product
+      // API 응답 구조: { success, message, data: { product: {...}, isLiked: boolean } }
+      return response.data
     },
   })
 }
