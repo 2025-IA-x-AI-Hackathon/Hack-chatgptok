@@ -212,10 +212,10 @@ export default function ProductDetailPage({ params } : {
 
     const handleStartChat = () => {
         createChatRoomMutation.mutate(
-            { productId: id },
+            { product_id: id },
             {
                 onSuccess: (chatRoom) => {
-                    router.push(`/chat/${chatRoom.id}`);
+                    router.push(`/chat/${chatRoom.room_id}`);
                 },
                 onError: (error) => {
                     toast.error(error.message || "채팅방 생성에 실패했습니다.");

@@ -217,7 +217,7 @@ export interface ChatMessage {
 }
 
 export interface CreateChatRoomRequest {
-    productId: string;
+    product_id: string;
 }
 
 export interface SendMessageRequest {

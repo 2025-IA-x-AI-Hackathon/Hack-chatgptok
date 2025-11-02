@@ -29,7 +29,7 @@ export default function ChatRoom({
   const { id: chatRoomId } = use(params)
   const router = useRouter()
   const scrollRef = useRef<HTMLDivElement>(null)
-  const typingTimeoutRef = useRef<NodeJS.Timeout>()
+  const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const [message, setMessage] = useState('')
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [chatRoom, setChatRoom] = useState<ChatRoomDetail | null>(null)
@@ -44,8 +44,8 @@ export default function ChatRoom({
   useEffect(() => {
     const fetchCurrentUser = async () => {
       const response = await authApi.getMe()
-      if (response.success && response.data?.data?.user) {
-        setCurrentUserId(response.data.data.user.member_id)
+      if (response.success && response.data) {
+        setCurrentUserId(response.data.user.member_id)
       }
     }
     fetchCurrentUser()

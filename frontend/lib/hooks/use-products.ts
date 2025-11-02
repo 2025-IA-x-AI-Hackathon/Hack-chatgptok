@@ -114,25 +114,12 @@ export function useCreateProduct() {
 }
 
 // ============ 상품 수정 ============
-export function useUpdateProduct(id: number) {
+export function useUpdateProduct(id: string) {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: async (data: ProductFormData) => {
-      // 가격에서 콤마 제거하고 숫자로 변환
-      const priceNumber = Number(data.price.replace(/[^0-9]/g, ""))
-
-      const requestData: UpdateProductRequest = {
-        name: data.name,
-        price: priceNumber,
-        description: data.description,
-
-        // TODO: 추후에 바꿔야 함
-        ply_url: "",
-        thumbnail: ""
-      }
-
-      const response = await productApi.updateProduct(id, requestData)
+    mutationFn: async (data: UpdateProductRequest) => {
+      const response = await productApi.updateProduct(id, data)
 
       if (!response.success) {
         throw new Error(response.error?.message || "상품 수정에 실패했습니다")
