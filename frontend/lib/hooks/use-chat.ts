@@ -72,7 +72,7 @@ export function useCreateOrGetChatRoom() {
         throw new Error(response.error?.message || "채팅방 생성에 실패했습니다")
       }
 
-      return response.data.data
+      return response.data
     },
     onSuccess: () => {
       // 채팅방 목록 갱신
@@ -93,7 +93,7 @@ export function useSendMessage(roomId: string) {
         throw new Error(response.error?.message || "메시지 전송에 실패했습니다")
       }
 
-      return response.data.data
+      return response.data
     },
     onSuccess: () => {
       // 메시지 목록 갱신
@@ -116,7 +116,7 @@ export function useMarkAsRead() {
         throw new Error(response.error?.message || "읽음 처리에 실패했습니다")
       }
 
-      return response.data.data
+      return response.data
     },
     onSuccess: (_, roomId) => {
       // 채팅방 정보 갱신

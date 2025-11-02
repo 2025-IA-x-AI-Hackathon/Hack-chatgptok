@@ -179,7 +179,7 @@ export default function ProductList() {
             {/* 고정 헤더 */}
             <div className="shrink-0 bg-background">
                 <div className="max-w-7xl mx-auto px-4 py-6">
-                    <h2 className="text-2xl font-bold">인기 상품</h2>
+                    <h2 className="text-2xl font-bold">상품 리스트</h2>
                 </div>
             </div>
 
