@@ -108,6 +108,24 @@ const ProductController = {
                 search,
             });
 
+            // seller_img를 presigned URL로 변환
+            if (result.products && result.products.length > 0) {
+                const productsWithPresignedUrls = await Promise.all(
+                    result.products.map(async (product) => {
+                        if (product.seller_img) {
+                            try {
+                                product.seller_img_url = await getPresignedUrl(product.seller_img);
+                            } catch (error) {
+                                logger.error('[Product] Seller 이미지 Presigned URL 생성 실패', error, { s3_key: product.seller_img });
+                                product.seller_img_url = null;
+                            }
+                        }
+                        return product;
+                    })
+                );
+                result.products = productsWithPresignedUrls;
+            }
+
             logger.info('[Product] 상품 목록 조회 성공', { resultCount: result.products?.length || 0 });
             res.status(200).json({
                 success: true,
