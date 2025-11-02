@@ -231,11 +231,6 @@ export default function ProductList() {
                                         <span>더 많은 상품을 불러오는 중...</span>
                                     </div>
                                 )}
-                                {!hasNextPage && (
-                                    <div className="text-center text-muted-foreground text-sm">
-                                        모든 상품을 불러왔습니다
-                                    </div>
-                                )}
                             </div>
                         </div>
                     )}

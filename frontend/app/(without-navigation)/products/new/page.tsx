@@ -305,7 +305,7 @@ export default function NewProductPage() {
                 </div>
 
                 {/* 설명 */}
-                <div className="p-4 border-b">
+                <div className="p-4">
                     <label className="block text-sm font-medium mb-2">설명</label>
                     <textarea
                         {...register("description")}
