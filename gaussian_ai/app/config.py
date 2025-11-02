@@ -4,6 +4,10 @@ Application configuration settings
 import os
 from pathlib import Path
 from typing import Optional
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
 
 
 class Settings:
@@ -18,7 +22,17 @@ class Settings:
     LOGS_DIR: Path = BASE_DIR / "logs"
 
     # Database
-    DATABASE_URL: str = os.getenv("DATABASE_URL", "sqlite:///./data/jobs.db")
+    # Use MySQL RDS if credentials are provided, otherwise fallback to SQLite
+    _db_host = os.getenv("DB_HOST")
+    _db_port = os.getenv("DB_PORT", "3306")
+    _db_user = os.getenv("DB_USER")
+    _db_password = os.getenv("DB_PASSWORD")
+    _db_name = os.getenv("DB_NAME")
+    
+    if _db_host and _db_user and _db_password and _db_name:
+        DATABASE_URL: str = f"mysql+pymysql://{_db_user}:{_db_password}@{_db_host}:{_db_port}/{_db_name}"
+    else:
+        DATABASE_URL: str = os.getenv("DATABASE_URL", "sqlite:///./data/jobs.db")
 
     # API Settings
     APP_TITLE: str = "Gaussian Splatting 3D Reconstruction API"

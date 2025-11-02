@@ -98,12 +98,12 @@ async def view_result_auto_rotate(product_id: str):
         if camera_pos:
             x, y, z = camera_pos
             # Make camera farther away
-            far_x, far_y, far_z = x * 10, y * 10, z * 10
-            viewer_url = f"/viewer/?load={ply_url_medium}&cameraPosition={far_x:.3f},{far_y:.3f},{far_z:.3f}&autoRotate=120&disableInput=true"
+            far_x, far_y, far_z = x * 6, y * 6, z * 6
+            viewer_url = f"/viewer/?load={ply_url_medium}&cameraPosition={far_x:.3f},{far_y:.3f},{far_z:.3f}&autoRotate=45&disableInput=true"
             logger.info(f"Auto-rotate viewer URL for {product_id}: {viewer_url} (120°/s, 10x camera distance, medium quality, input disabled)")
         else:
             # Fallback to default view if camera position not available
-            viewer_url = f"/viewer/?load={ply_url_medium}&autoRotate=120&disableInput=true"
+            viewer_url = f"/viewer/?load={ply_url_medium}&autoRotate=45&disableInput=true"
             logger.warning(f"Could not read camera position for {product_id}, using default view with auto-rotate")
 
         return RedirectResponse(url=viewer_url)

@@ -35,5 +35,15 @@ class Settings:
     PORT: int = int(os.getenv("PORT", "8001"))
     DEBUG: bool = os.getenv("DEBUG", "True").lower() == "true"
 
+    # Queue
+    MAX_CONCURRENT_JOBS: int = int(os.getenv("MAX_CONCURRENT_JOBS", "1"))
+
+    # MySQL Database (RDS)
+    DB_HOST: str = os.getenv("DB_HOST", "localhost")
+    DB_PORT: int = int(os.getenv("DB_PORT", "3306"))
+    DB_USER: str = os.getenv("DB_USER", "root")
+    DB_PASSWORD: str = os.getenv("DB_PASSWORD", "")
+    DB_NAME: str = os.getenv("DB_NAME", "marketplace")
+
 
 settings = Settings()

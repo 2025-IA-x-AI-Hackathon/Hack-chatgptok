@@ -78,6 +78,33 @@ button[aria-label*="Fullscreen"] {
     display: none !important;
 }
 
+/* Hide ALL buttons globally */
+button,
+.pcui-button,
+.popup-button,
+.download-button,
+.camera-mode-button,
+#panel-toggle,
+#github-button,
+#launch-ar-button {
+    display: none !important;
+}
+
+/* Hide ALL floating UI elements */
+#floating-bottom-parent,
+#floating-top-parent,
+#popup-buttons-parent,
+#popup {
+    display: none !important;
+}
+
+/* Hide left panel completely */
+#panel-left,
+#scene-panel,
+#device-panel {
+    display: none !important;
+}
+
 /* Hide loading spinner after load (optional - keep if needed) */
 /* .loading-spinner {
     display: none !important;

@@ -4,13 +4,19 @@ Job management API endpoints
 import asyncio
 from pathlib import Path
 from typing import List
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, BackgroundTasks, status
 from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 
 from app.config import settings
 from app.db import crud
 from app.db.database import SessionLocal
+from app.db.mysql_db import (
+    create_job_3dgs,
+    update_job_3dgs_status,
+    increment_job_count_and_activate,
+    update_product_sell_status
+)
 from app.schemas.job import JobCreateRequest, JobCreateResponse, JobStatusResponse, JobListResponse
 from app.utils.s3_utils import download_s3_images
 from app.utils.logger import setup_logger
@@ -33,16 +39,17 @@ def get_db() -> Session:
         db.close()
 
 
-@router.post("/jobs", response_model=JobCreateResponse)
-async def create_job(request: JobCreateRequest):
+@router.post("/jobs", status_code=status.HTTP_202_ACCEPTED)
+async def create_job(request: JobCreateRequest, background_tasks: BackgroundTasks):
     """
     Create new reconstruction job with S3 images
 
     Args:
         request: Job creation request with product_id and S3 image paths
+        background_tasks: FastAPI BackgroundTasks
 
     Returns:
-        Job creation response with product_id and status
+        202 Accepted: 작업이 큐에 추가됨
     """
     # Validate image count (IMPLEMENT.md: 3~20장)
     image_count = len(request.s3_images)
@@ -51,42 +58,80 @@ async def create_job(request: JobCreateRequest):
     if image_count > settings.MAX_IMAGES:
         raise HTTPException(400, f"이미지 {settings.MIN_IMAGES}~{settings.MAX_IMAGES}장만 허용합니다. (현재: {image_count}장)")
 
-    # Create job directory
-    job_dir = settings.DATA_DIR / request.product_id
-    upload_dir = job_dir / "upload" / "images"
-    upload_dir.mkdir(parents=True, exist_ok=True)
+    async def _process_job_background():
+        """백그라운드에서 S3 다운로드 및 재구성 처리"""
+        try:
+            # Create job directory
+            job_dir = settings.DATA_DIR / request.product_id
+            upload_dir = job_dir / "upload" / "images"
+            upload_dir.mkdir(parents=True, exist_ok=True)
 
-    logger.info(f"Created job for product {request.product_id} with {image_count} S3 images")
+            logger.info(f"Created job for product {request.product_id} with {image_count} S3 images")
 
-    # Download images from S3
-    try:
-        downloaded_count = await download_s3_images(request.s3_images, upload_dir)
-        logger.info(f"Downloaded {downloaded_count}/{image_count} images from S3")
-    except Exception as e:
-        logger.error(f"Failed to download S3 images for {request.product_id}: {e}")
-        raise HTTPException(500, f"S3 이미지 다운로드 실패: {str(e)}")
+            # Extract s3_input_prefix from first S3 path
+            # Example: "s3://bucket/test_3dgs/image1.jpg" → "test_3dgs/"
+            s3_input_prefix = ""
+            if request.s3_images:
+                first_path = request.s3_images[0]
+                # Remove s3://bucket/ prefix and extract directory
+                parts = first_path.replace("s3://", "").split("/")
+                if len(parts) > 2:  # bucket/prefix/file.jpg
+                    s3_input_prefix = "/".join(parts[1:-1]) + "/"
 
-    # Create database record
-    db = SessionLocal()
-    try:
-        crud.create_job(
-            db=db,
-            product_id=request.product_id,
-            image_count=downloaded_count,
-            iterations=request.iterations
-        )
-        db.commit()
-    finally:
-        db.close()
+            # MySQL: Create job_3dgs record (status='QUEUED' by default)
+            create_job_3dgs(
+                product_id=request.product_id,
+                s3_input_prefix=s3_input_prefix or "unknown"
+            )
 
-    # Start background processing (always resize images to 1600px)
-    asyncio.create_task(process_job(request.product_id))
+            # Download images from S3
+            try:
+                downloaded_count = await download_s3_images(request.s3_images, upload_dir)
+                logger.info(f"Downloaded {downloaded_count}/{image_count} images from S3")
+            except Exception as e:
+                logger.error(f"Failed to download S3 images for {request.product_id}: {e}")
+                # MySQL: Mark job as FAILED
+                update_job_3dgs_status(request.product_id, 'FAILED', error_msg=f"S3 download failed: {str(e)}")
+                update_product_sell_status(request.product_id, 'FAILED')
+                return
 
-    return JobCreateResponse(
-        product_id=request.product_id,
-        status="PENDING",
-        message=f"Job created with {downloaded_count} images"
-    )
+            # Create SQLite database record (internal tracking)
+            db = SessionLocal()
+            try:
+                crud.create_job(
+                    db=db,
+                    product_id=request.product_id,
+                    image_count=downloaded_count,
+                    iterations=request.iterations
+                )
+                db.commit()
+            finally:
+                db.close()
+
+            # Start reconstruction processing (always resize images to 1600px)
+            await process_job(request.product_id)
+
+        except Exception as e:
+            # 백그라운드 태스크에서 예상치 못한 에러 발생
+            logger.error(f"Background task failed for product_id={request.product_id}: {str(e)}", exc_info=True)
+
+            # MySQL에 실패 상태 기록
+            try:
+                update_job_3dgs_status(request.product_id, 'FAILED', error_msg=str(e))
+                update_product_sell_status(request.product_id, 'FAILED')
+            except Exception as db_error:
+                logger.error(f"Failed to update DB with error status: {str(db_error)}")
+
+    # 백그라운드 태스크 등록 및 즉시 응답
+    background_tasks.add_task(_process_job_background)
+
+    logger.info(f"Job queued: product_id={request.product_id}")
+
+    return {
+        "product_id": request.product_id,
+        "status": "QUEUED",
+        "message": f"재구성 작업이 큐에 추가되었습니다. job_3dgs 테이블에서 진행 상황을 확인할 수 있습니다."
+    }
 
 
 @router.get("/jobs/{product_id}/status", response_model=JobStatusResponse)
@@ -320,11 +365,14 @@ async def process_job(product_id: str):
         log_file_path = log_dir / "process.log"
 
         try:
-            # Update status to PROCESSING
+            # Update status to PROCESSING (SQLite)
             crud.update_job_status(db, product_id, "PROCESSING")
             # Preflight step removed - now runs once at server startup
             crud.update_job_step(db, product_id, "COLMAP_FEAT", 15)
             db.commit()
+
+            # MySQL: Update job_3dgs status to RUNNING
+            update_job_3dgs_status(product_id, 'RUNNING')
 
             with open(log_file_path, 'w') as log_file:
                 log_file.write(f">> [Job {product_id}] Starting reconstruction pipeline\n")
@@ -452,10 +500,16 @@ async def process_job(product_id: str):
                     log_file.write(f">> [OPTIMIZE] Medium version created: {medium_size:.2f}MB\n")
                     log_file.flush()
 
-                # Update job as completed
+                # Update job as completed (SQLite)
                 crud.update_job_status(db, product_id, "COMPLETED")
                 crud.update_job_step(db, product_id, "DONE", 100)
                 db.commit()
+
+                # MySQL: Update job_3dgs status to DONE
+                update_job_3dgs_status(product_id, 'DONE')
+
+                # MySQL: Increment product.job_count and activate if needed
+                increment_job_count_and_activate(product_id)
 
                 # Log completion
                 success_msg = f">> [SUCCESS] Job completed! Generated {gaussian_count} Gaussians"
@@ -466,7 +520,7 @@ async def process_job(product_id: str):
         except Exception as e:
             logger.error(f"Job {product_id} failed: {str(e)}")
 
-            # Log error to database
+            # Log error to database (SQLite)
             crud.log_error(
                 db, product_id,
                 stage="PIPELINE",
@@ -479,6 +533,17 @@ async def process_job(product_id: str):
             )
             crud.update_job_step(db, product_id, "ERROR", 0)
             db.commit()
+
+            # MySQL: Update job_3dgs status to FAILED
+            # TODO(MVP): 추가 실패 케이스 고려 필요
+            # - 이미지 다운로드 실패 (이미 /recon/jobs에서 처리)
+            # - COLMAP 특징점 부족 (현재 처리)
+            # - Gaussian Splatting 학습 실패 (CUDA 에러, 메모리 부족 등)
+            # - 타임아웃
+            update_job_3dgs_status(product_id, 'FAILED', error_msg=str(e))
+
+            # MySQL: product.sell_status = 'FAILED'
+            update_product_sell_status(product_id, 'FAILED')
 
             # Write to log file
             if log_file_path.exists():

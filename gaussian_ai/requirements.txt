@@ -6,6 +6,7 @@ jinja2>=3.1.0
 
 # Database
 sqlalchemy>=2.0.0
+PyMySQL==1.1.0
 
 # Scientific computing and ML
 numpy>=1.24.0

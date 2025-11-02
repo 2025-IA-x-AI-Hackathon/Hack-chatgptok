@@ -1,7 +1,7 @@
 """
 결함 분석 API 엔드포인트
 """
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, BackgroundTasks, Response, status
 import logging
 import asyncio
 from datetime import datetime, timezone
@@ -15,13 +15,22 @@ from app.schemas.inspection import (
     DescriptionResult
 )
 from app.services.gemini_inspector import analyze_defects, generate_product_description
+from app.config import settings
+from app.db.database import (
+    update_fault_description,
+    increment_job_count_and_activate,
+    update_product_sell_status
+)
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/inspect", tags=["inspection"])
 
+# Queue system: Limit concurrent jobs to prevent Gemini API rate limit (15 RPM)
+job_semaphore = asyncio.Semaphore(settings.MAX_CONCURRENT_JOBS)
 
-@router.post("/fault_desc", response_model=ProductAnalysisResult)
-async def fault_desc(request: ProductAnalysisRequest):
+
+@router.post("/fault_desc", status_code=status.HTTP_202_ACCEPTED)
+async def fault_desc(request: ProductAnalysisRequest, background_tasks: BackgroundTasks):
     """
     제품 전체 이미지 일괄 분석 (RDS 연동용)
 
@@ -41,181 +50,185 @@ async def fault_desc(request: ProductAnalysisRequest):
 
     Args:
         request: 제품 분석 요청 (product_id, s3_images, product_name, product_description)
+        background_tasks: FastAPI BackgroundTasks
 
     Returns:
-        ProductAnalysisResult: 종합 분석 결과 + 마크다운 요약
+        202 Accepted: 작업이 큐에 추가됨
     """
-    async def _process_product():
-        import time
-        start_time = time.time()
-        timeout_limit = 85.0  # 90초 중 85초까지만 사용 (안전 마진)
+    async def _process_product_background():
+        """백그라운드에서 실제 처리"""
+        try:
+            import time
+            start_time = time.time()
+            timeout_limit = 85.0  # 90초 중 85초까지만 사용 (안전 마진)
 
-        logger.info(
-            f"Starting product analysis: product_id={request.product_id}, "
-            f"images={len(request.s3_images)}"
-        )
+            # Queue system: Wait for available slot
+            async with job_semaphore:
+                logger.info(
+                    f"Starting product analysis: product_id={request.product_id}, "
+                    f"images={len(request.s3_images)}"
+                )
 
-        # 2. 모든 이미지 배치 분석 (Rate Limit 회피)
-        # Gemini 무료 티어: 15 RPM → 5개씩 배치 처리
-        batch_size = 5
-        all_results = []
-        processed_images = []
-        timed_out = False
+                # 1. DB 상태 업데이트: RUNNING
+                update_fault_description(
+                    product_id=request.product_id,
+                    markdown="",
+                    status='RUNNING',
+                    error_msg=None
+                )
 
-        for i in range(0, len(request.s3_images), batch_size):
-            # 타임아웃 체크 (배치 시작 전)
-            elapsed = time.time() - start_time
-            if elapsed >= timeout_limit:
-                logger.warning(f"Timeout approaching ({elapsed:.1f}s), stopping early")
-                timed_out = True
-                break
+                # 2. 모든 이미지 배치 분석 (Rate Limit 회피)
+                # Gemini 무료 티어: 15 RPM → 5개씩 배치 처리
+                batch_size = 5
+                all_results = []
+                processed_images = []
+                timed_out = False
 
-            batch_images = request.s3_images[i:i+batch_size]
-            logger.info(f"Processing batch {i//batch_size + 1}/{(len(request.s3_images)-1)//batch_size + 1}")
+                for i in range(0, len(request.s3_images), batch_size):
+                    # 타임아웃 체크 (배치 시작 전)
+                    elapsed = time.time() - start_time
+                    if elapsed >= timeout_limit:
+                        logger.warning(f"Timeout approaching ({elapsed:.1f}s), stopping early")
+                        timed_out = True
+                        break
 
-            # 배치 내에서는 병렬 처리
-            tasks = [
-                analyze_defects(s3_path=img_path, item_category="물품")
-                for img_path in batch_images
-            ]
-            batch_results = await asyncio.gather(*tasks, return_exceptions=True)
-            all_results.extend(batch_results)
-            processed_images.extend(batch_images)
+                    batch_images = request.s3_images[i:i+batch_size]
+                    logger.info(f"Processing batch {i//batch_size + 1}/{(len(request.s3_images)-1)//batch_size + 1}")
 
-            # 마지막 배치가 아니면 4초 대기 (RPM 제한 회피)
-            if i + batch_size < len(request.s3_images):
-                await asyncio.sleep(4)
+                    # 배치 내에서는 병렬 처리
+                    tasks = [
+                        analyze_defects(s3_path=img_path, item_category="물품")
+                        for img_path in batch_images
+                    ]
+                    batch_results = await asyncio.gather(*tasks, return_exceptions=True)
+                    all_results.extend(batch_results)
+                    processed_images.extend(batch_images)
 
-        results = all_results
-        images_to_process = processed_images
+                    # 마지막 배치가 아니면 4초 대기 (RPM 제한 회피)
+                    if i + batch_size < len(request.s3_images):
+                        await asyncio.sleep(4)
 
-        # 3. 결과 취합 (성공한 이미지만)
-        inspection_results: List[ImageInspectionResult] = []
-        failed_count = 0
-        total_defects = 0
-        skipped_count = len(request.s3_images) - len(images_to_process)
+                results = all_results
+                images_to_process = processed_images
 
-        for img_path, result in zip(images_to_process, results):
-            if isinstance(result, Exception):
-                logger.error(f"Image analysis failed: {img_path}, error: {result}")
-                failed_count += 1
-                # 실패한 이미지는 종합 평가에서 제외
-            else:
-                inspection_results.append(ImageInspectionResult(
-                    image_path=img_path,
-                    defects=result.defects,
-                    overall_condition=result.overall_condition,
-                    recommended_price_adjustment=result.recommended_price_adjustment,
-                    analysis_confidence=result.analysis_confidence
-                ))
-                total_defects += len(result.defects)
+                # 3. 결과 취합 (성공한 이미지만)
+                inspection_results: List[ImageInspectionResult] = []
+                failed_count = 0
+                total_defects = 0
+                skipped_count = len(request.s3_images) - len(images_to_process)
 
-        # 분석 성공한 이미지가 없으면 에러 마크다운 생성
-        if not inspection_results:
-            markdown = _generate_error_markdown(
-                total_images=len(request.s3_images),
-                processed_images=len(images_to_process),
-                failed_count=failed_count,
-                skipped_count=skipped_count,
-                timed_out=timed_out
-            )
-            return ProductAnalysisResult(
-                product_id=request.product_id,
-                inspection_results=[],
-                aggregated_condition="D",
-                aggregated_price_adjustment=-100,
-                total_defects_count=0,
-                markdown_summary=markdown,
-                completed_at=datetime.now(timezone.utc).isoformat()
-            )
+                for img_path, result in zip(images_to_process, results):
+                    if isinstance(result, Exception):
+                        logger.error(f"Image analysis failed: {img_path}, error: {result}")
+                        failed_count += 1
+                        # 실패한 이미지는 종합 평가에서 제외
+                    else:
+                        inspection_results.append(ImageInspectionResult(
+                            image_path=img_path,
+                            defects=result.defects,
+                            overall_condition=result.overall_condition,
+                            recommended_price_adjustment=result.recommended_price_adjustment,
+                            analysis_confidence=result.analysis_confidence
+                        ))
+                        total_defects += len(result.defects)
 
-        logger.info(f"Analysis complete: {len(inspection_results)} succeeded, {failed_count} failed")
+                # 분석 성공한 이미지가 없으면 에러 마크다운 생성하고 FAILED 처리
+                if not inspection_results:
+                    markdown = _generate_error_markdown(
+                        total_images=len(request.s3_images),
+                        processed_images=len(images_to_process),
+                        failed_count=failed_count,
+                        skipped_count=skipped_count,
+                        timed_out=timed_out
+                    )
+                    # DB 업데이트: FAILED
+                    update_fault_description(
+                        product_id=request.product_id,
+                        markdown=markdown,
+                        status='FAILED',
+                        error_msg="No successful image analysis"
+                    )
+                    update_product_sell_status(request.product_id, 'FAILED')
+                    return
 
-        # 4. 종합 평가 (상위 70% 가중 평균 - 이상치 제거)
-        condition_order = {"S": 0, "A": 1, "B": 2, "C": 3, "D": 4}
-        condition_scores = [condition_order[r.overall_condition] for r in inspection_results]
+                logger.info(f"Analysis complete: {len(inspection_results)} succeeded, {failed_count} failed")
 
-        # 정렬 후 상위 70% 선택
-        sorted_scores = sorted(condition_scores)
-        top_70_count = max(1, int(len(sorted_scores) * 0.7))
-        top_70_scores = sorted_scores[:top_70_count]
+                # 4. 종합 평가 (상위 70% 가중 평균 - 이상치 제거)
+                condition_order = {"S": 0, "A": 1, "B": 2, "C": 3, "D": 4}
+                condition_scores = [condition_order[r.overall_condition] for r in inspection_results]
 
-        # 평균 계산 후 가장 가까운 등급 선택
-        avg_score = sum(top_70_scores) / len(top_70_scores)
-        aggregated_condition = min(condition_order.keys(), key=lambda x: abs(condition_order[x] - avg_score))
+                # 정렬 후 상위 70% 선택
+                sorted_scores = sorted(condition_scores)
+                top_70_count = max(1, int(len(sorted_scores) * 0.7))
+                top_70_scores = sorted_scores[:top_70_count]
 
-        # 종합 가격 조정 (상위 70% 평균)
-        adjustments = [r.recommended_price_adjustment for r in inspection_results]
-        sorted_adjustments = sorted(adjustments, reverse=True)  # 할인율이 작은 순
-        top_70_adj = sorted_adjustments[:top_70_count]
-        aggregated_adjustment = int(sum(top_70_adj) / len(top_70_adj))
+                # 평균 계산 후 가장 가까운 등급 선택
+                avg_score = sum(top_70_scores) / len(top_70_scores)
+                aggregated_condition = min(condition_order.keys(), key=lambda x: abs(condition_order[x] - avg_score))
 
-        # 5. 마크다운 요약 생성
-        markdown = _generate_markdown_summary(
-            product_name=request.product_name or "제품",
-            overall_condition=aggregated_condition,
-            price_adjustment=aggregated_adjustment,
-            inspection_results=inspection_results,
-            images_analyzed=len(inspection_results),
-            images_failed=failed_count,
-            images_skipped=skipped_count,
-            timed_out=timed_out
-        )
+                # 종합 가격 조정 (상위 70% 평균)
+                adjustments = [r.recommended_price_adjustment for r in inspection_results]
+                sorted_adjustments = sorted(adjustments, reverse=True)  # 할인율이 작은 순
+                top_70_adj = sorted_adjustments[:top_70_count]
+                aggregated_adjustment = int(sum(top_70_adj) / len(top_70_adj))
 
-        # 6. 완료 시간
-        completed_at = datetime.now(timezone.utc).isoformat()
+                # 5. 마크다운 요약 생성
+                markdown = _generate_markdown_summary(
+                    product_name=request.product_name or "제품",
+                    overall_condition=aggregated_condition,
+                    price_adjustment=aggregated_adjustment,
+                    inspection_results=inspection_results,
+                    images_analyzed=len(inspection_results),
+                    images_failed=failed_count,
+                    images_skipped=skipped_count,
+                    timed_out=timed_out
+                )
 
-        logger.info(
-            f"Product analysis complete: product_id={request.product_id}, "
-            f"condition={aggregated_condition}, defects={total_defects}"
-        )
+                logger.info(
+                    f"Product analysis complete: product_id={request.product_id}, "
+                    f"condition={aggregated_condition}, defects={total_defects}"
+                )
 
-        return ProductAnalysisResult(
-            product_id=request.product_id,
-            inspection_results=inspection_results,
-            aggregated_condition=aggregated_condition,
-            aggregated_price_adjustment=aggregated_adjustment,
-            total_defects_count=total_defects,
-            markdown_summary=markdown,
-            completed_at=completed_at
-        )
+                # 6. DB 업데이트: DONE (성공)
+                update_fault_description(
+                    product_id=request.product_id,
+                    markdown=markdown,
+                    status='DONE',
+                    error_msg=None
+                )
 
-    # 타임아웃 처리 (백업용, 내부에서 85초에 조기 종료)
-    try:
-        return await asyncio.wait_for(_process_product(), timeout=95.0)
-    except asyncio.TimeoutError:
-        # 내부 조기 종료가 실패한 경우 (예외적 상황)
-        logger.error(f"Hard timeout reached: product_id={request.product_id}")
-        # 에러 마크다운과 함께 응답 반환
-        markdown = _generate_error_markdown(
-            total_images=len(request.s3_images),
-            processed_images=0,
-            failed_count=0,
-            skipped_count=len(request.s3_images),
-            timed_out=True
-        )
-        return ProductAnalysisResult(
-            product_id=request.product_id,
-            inspection_results=[],
-            aggregated_condition="D",
-            aggregated_price_adjustment=-100,
-            total_defects_count=0,
-            markdown_summary=markdown,
-            completed_at=datetime.now(timezone.utc).isoformat()
-        )
-    except Exception as e:
-        logger.error(f"Product analysis failed: {str(e)}")
-        # 일반 에러도 마크다운으로 반환
-        markdown = f"# 결함 분석 결과\n\n❌ **시스템 오류**: {str(e)}\n\n문의: 시스템 관리자에게 연락하세요.\n"
-        return ProductAnalysisResult(
-            product_id=request.product_id,
-            inspection_results=[],
-            aggregated_condition="D",
-            aggregated_price_adjustment=-100,
-            total_defects_count=0,
-            markdown_summary=markdown,
-            completed_at=datetime.now(timezone.utc).isoformat()
-        )
+                # 7. product.job_count 증가 및 활성화
+                increment_job_count_and_activate(request.product_id)
+
+                logger.info(f"Job completed successfully: product_id={request.product_id}")
+
+        except Exception as e:
+            # 백그라운드 태스크에서 예상치 못한 에러 발생
+            logger.error(f"Background task failed for product_id={request.product_id}: {str(e)}", exc_info=True)
+
+            # DB에 실패 상태 기록
+            try:
+                markdown = f"# 결함 분석 결과\n\n❌ **시스템 오류**: {str(e)}\n\n문의: 시스템 관리자에게 연락하세요.\n"
+                update_fault_description(
+                    product_id=request.product_id,
+                    markdown=markdown,
+                    status='FAILED',
+                    error_msg=str(e)
+                )
+                update_product_sell_status(request.product_id, 'FAILED')
+            except Exception as db_error:
+                logger.error(f"Failed to update DB with error status: {str(db_error)}")
+
+    # 백그라운드 태스크 등록 및 즉시 응답
+    background_tasks.add_task(_process_product_background)
+
+    logger.info(f"Job queued: product_id={request.product_id}")
+
+    return {
+        "product_id": request.product_id,
+        "status": "QUEUED",
+        "message": "분석이 큐에 추가되었습니다. 완료되면 fault_description 테이블에서 확인할 수 있습니다."
+    }
 
 
 def _generate_markdown_summary(
