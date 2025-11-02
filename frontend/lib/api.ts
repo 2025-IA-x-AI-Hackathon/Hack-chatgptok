@@ -51,7 +51,7 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8
  */
 function getAccessToken(): string | null {
     if (typeof window === "undefined") return null;
-    return sessionStorage.getItem("accessToken");
+    return localStorage.getItem("accessToken");
 }
 
 /**
@@ -59,7 +59,7 @@ function getAccessToken(): string | null {
  */
 function setAccessToken(token: string): void {
     if (typeof window === "undefined") return;
-    sessionStorage.setItem("accessToken", token);
+    localStorage.setItem("accessToken", token);
     // 쿠키에도 저장 (middleware에서 사용)
     document.cookie = `accessToken=${token}; path=/; max-age=${60 * 60 * 24 * 7}`; // 7일
 }
@@ -69,7 +69,7 @@ function setAccessToken(token: string): void {
  */
 function getRefreshToken(): string | null {
     if (typeof window === "undefined") return null;
-    return sessionStorage.getItem("refreshToken");
+    return localStorage.getItem("refreshToken");
 }
 
 /**
@@ -77,7 +77,7 @@ function getRefreshToken(): string | null {
  */
 function setRefreshToken(token: string): void {
     if (typeof window === "undefined") return;
-    sessionStorage.setItem("refreshToken", token);
+    localStorage.setItem("refreshToken", token);
     // 쿠키에도 저장 (middleware에서 사용)
     document.cookie = `refreshToken=${token}; path=/; max-age=${60 * 60 * 24 * 30}`; // 30일
 }
@@ -87,8 +87,8 @@ function setRefreshToken(token: string): void {
  */
 export function clearTokens(): void {
     if (typeof window === "undefined") return;
-    sessionStorage.removeItem("accessToken");
-    sessionStorage.removeItem("refreshToken");
+    localStorage.removeItem("accessToken");
+    localStorage.removeItem("refreshToken");
     // 쿠키에서도 제거
     document.cookie = "accessToken=; path=/; max-age=0";
     document.cookie = "refreshToken=; path=/; max-age=0";
@@ -296,7 +296,7 @@ export const likeApi = {
             {
                 method: "POST",
             }
-        );
+        , true);
     },
 
     /**

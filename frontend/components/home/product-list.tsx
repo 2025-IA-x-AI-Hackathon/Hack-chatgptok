@@ -146,7 +146,7 @@ export default function ProductList() {
     }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
 
     // 모든 페이지의 상품을 하나의 배열로 병합
-    const allProducts = data?.pages.flatMap((page) => page.products) ?? [];
+    const allProducts = data?.pages.flatMap((page) => page?.products ?? []) ?? [];
 
     return (
         <div className="fixed inset-0 flex flex-col bg-background pb-16">

@@ -6,12 +6,12 @@ const UserController = {
     async getMe(req, res) {
         console.log('[User] 내 정보 조회 요청 - 내 ID:', req.user?.memberId);
         try {
-            const memberId = req.user.memberId;
-
+            const memberId = req.user?.memberId;
             if (!memberId) {
+                console.log('[User] 내 정보 조회 실패 - 인증되지 않은 사용자');
                 return res.status(401).json({
                     success: false,
-                    message: '인증이 필요합니다.'
+                    message: '인증이 필요합니다.',
                 });
             }
 

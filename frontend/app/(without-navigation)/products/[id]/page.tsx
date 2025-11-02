@@ -21,6 +21,8 @@ import {
 import { toast } from "sonner";
 import { useProduct, useDeleteProduct } from "@/lib/hooks/use-products";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useAddLike, useRemoveLike } from "@/lib/hooks/use-likes";
+import { useCreateOrGetChatRoom } from "@/lib/hooks/use-chat";
 
 // 가격 포맷 함수
 const formatPrice = (price: number) => {
@@ -120,10 +122,14 @@ export default function ProductDetailPage({ params } : {
     const { data: product, isLoading, error, refetch } = useProduct(id);
 
     const deleteProductMutation = useDeleteProduct();
+    const addLikeMutation = useAddLike();
+    const removeLikeMutation = useRemoveLike();
+    const createChatRoomMutation = useCreateOrGetChatRoom();
 
     const [carouselApi, setCarouselApi] = useState<CarouselApi>();
     const [currentImageIndex, setCurrentImageIndex] = useState(0);
     const [isMenuOpen, setIsMenuOpen] = useState(false);
+    const [isLiked, setIsLiked] = useState(false);
 
     // 진행 중인 요청을 추적하여 중복 호출 방지
 
@@ -178,6 +184,44 @@ export default function ProductDetailPage({ params } : {
                 },
             });
         }
+    };
+
+    const handleLikeToggle = () => {
+        if (isLiked) {
+            removeLikeMutation.mutate(id, {
+                onSuccess: () => {
+                    setIsLiked(false);
+                    toast.success("좋아요를 취소했습니다.");
+                },
+                onError: (error) => {
+                    toast.error(error.message || "좋아요 취소에 실패했습니다.");
+                },
+            });
+        } else {
+            addLikeMutation.mutate(id, {
+                onSuccess: () => {
+                    setIsLiked(true);
+                    toast.success("좋아요를 눌렀습니다.");
+                },
+                onError: (error) => {
+                    toast.error(error.message || "좋아요에 실패했습니다.");
+                },
+            });
+        }
+    };
+
+    const handleStartChat = () => {
+        createChatRoomMutation.mutate(
+            { product_id: id },
+            {
+                onSuccess: (chatRoom) => {
+                    router.push(`/chat/${chatRoom.room_id}`);
+                },
+                onError: (error) => {
+                    toast.error(error.message || "채팅방 생성에 실패했습니다.");
+                },
+            }
+        );
     };
 
     if (isLoading) {
@@ -370,25 +414,26 @@ export default function ProductDetailPage({ params } : {
             {/* 하단 고정 버튼 */}
             <div className="fixed bottom-0 left-0 right-0 bg-background border-t">
                 <div className="max-w-7xl mx-auto px-4 py-3 flex items-center gap-3">
-                    {/* <button
+                    <button
                         onClick={handleLikeToggle}
+                        disabled={addLikeMutation.isPending || removeLikeMutation.isPending}
                         className={`p-3 rounded-lg border transition-colors ${
                             isLiked
                                 ? "bg-rose-50 border-rose-200 text-rose-500"
                                 : "hover:bg-accent"
-                        }`}
+                        } disabled:opacity-50 disabled:cursor-not-allowed`}
                     >
                         <Heart
                             className={`w-6 h-6 ${isLiked ? "fill-current" : ""}`}
                         />
-                    </button> */}
-                    {/* <button
-                        // onClick={handleStartChat}
-                        disabled={isChatLoading}
+                    </button>
+                    <button
+                        onClick={handleStartChat}
+                        disabled={createChatRoomMutation.isPending}
                         className="flex-1 bg-primary text-primary-foreground py-3 rounded-lg font-medium hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                        {isChatLoading ? "채팅방 생성 중..." : "채팅하기"}
-                    </button> */}
+                        {createChatRoomMutation.isPending ? "채팅방 생성 중..." : "채팅하기"}
+                    </button>
                 </div>
             </div>
         </div>
