@@ -237,7 +237,8 @@ export const productApi = {
             {
                 method: "PUT",
                 body: JSON.stringify(data),
-            }
+            },
+            true
         );
     },
 
@@ -249,7 +250,8 @@ export const productApi = {
             `/products/${id}`,
             {
                 method: "DELETE",
-            }
+            },
+            true
         );
     },
 
@@ -307,7 +309,8 @@ export const likeApi = {
             `/products/${productId}/like`,
             {
                 method: "DELETE",
-            }
+            },
+            true
         );
     },
 };
