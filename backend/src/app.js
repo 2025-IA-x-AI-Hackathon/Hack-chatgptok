@@ -25,7 +25,7 @@ const httpServer = createServer(app);
 // Socket.IO 서버 생성 및 CORS 설정
 const io = new Server(httpServer, {
     cors: {
-        origin: ['http://localhost:3000', 'http://52.79.148.54:3000'],
+        origin: ['http://localhost:3000', 'http://52.79.148.54:3000', 'http://scannsell.duckdns.org:3000'],
         credentials: true,
         methods: ['GET', 'POST']
     }
@@ -40,7 +40,7 @@ export { io };
 
 app.use(
     cors({
-        origin: ['http://localhost:3000', 'http://52.79.148.54:3000'],
+        origin: ['http://localhost:3000', 'http://52.79.148.54:3000', 'http://scannsell.duckdns.org:3000'],
         credentials: true, // 쿠키 전송을 위해 필요
     }),
 );
