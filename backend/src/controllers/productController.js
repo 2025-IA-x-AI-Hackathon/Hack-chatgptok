@@ -205,11 +205,24 @@ const ProductController = {
                 logger.error('[Product] 조회수 증가 실패', err)
             );
 
+            // 좋아요 여부 확인 (인증된 사용자만)
+            let isLiked = false;
+            const memberId = req.user?.memberId;
+            if (memberId) {
+                try {
+                    isLiked = await ProductModel.isLiked(productId, memberId);
+                } catch (error) {
+                    logger.error('[Product] 좋아요 여부 확인 실패', error, { productId, memberId });
+                    isLiked = false;
+                }
+            }
+
             res.status(200).json({
                 success: true,
                 message: '상품 조회에 성공했습니다.',
                 data: {
                     product,
+                    isLiked,
                 },
             });
         } catch (error) {
