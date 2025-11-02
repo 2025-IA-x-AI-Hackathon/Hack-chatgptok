@@ -55,6 +55,7 @@ export interface Product {
     updated_at: string | null;
     seller_nickname: string;
     seller_img: string;
+    seller_img_url: string;
     thumbnail: string | null;
 }
 
@@ -166,6 +167,16 @@ export interface PresignedUploadInfo {
 export interface PresignedUrlsResponse {
     uploads: PresignedUploadInfo[];
     expiresIn: number;
+}
+
+// ============ AI 설명 생성 타입 ============
+export interface GenerateDescriptionRequest {
+    s3_path: string;
+    product_name: string;
+}
+
+export interface GenerateDescriptionResponse {
+    description: string;
 }
 
 // ============ 채팅 타입 ============

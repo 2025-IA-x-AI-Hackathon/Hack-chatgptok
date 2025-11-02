@@ -356,7 +356,6 @@ export default function ProductDetailPage({ params } : {
                                             className="object-cover"
                                             sizes="100vw"
                                             priority={index === 0}
-                                            unoptimized
                                         />
                                     </div>
                                 </CarouselItem>
@@ -384,11 +383,10 @@ export default function ProductDetailPage({ params } : {
                     <div className="flex items-center gap-3">
                         <div className="relative w-12 h-12 rounded-full overflow-hidden bg-muted">
                             <Image
-                                src={product.seller_img}
+                                src={product.seller_img_url}
                                 alt={product.seller_nickname}
                                 fill
                                 className="object-cover"
-                                unoptimized
                             />
                         </div>
                         <div>
