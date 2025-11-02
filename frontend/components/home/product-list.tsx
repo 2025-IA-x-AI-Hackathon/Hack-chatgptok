@@ -1,6 +1,6 @@
 "use client";
 
-import { Heart, Plus, RefreshCw, Loader2 } from "lucide-react";
+import { Heart, Plus, RefreshCw, Loader2, Eye } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
 import { useInfiniteProducts } from "@/lib/hooks/use-products";
@@ -97,10 +97,16 @@ function ProductItem({ product }: { product: Product }) {
                         <p className="text-xl font-bold">
                             {formatPrice(product.price)}
                         </p>
-                        {/* 좋아요 */}
-                        <div className="flex items-center gap-1 text-muted-foreground text-sm">
-                            <Heart className="w-4 h-4" />
-                            <span>{product.likes_cnt}</span>
+                        {/* 조회수 & 좋아요 */}
+                        <div className="flex items-center gap-3 text-muted-foreground text-sm">
+                            <div className="flex items-center gap-1">
+                                <Eye className="w-4 h-4" />
+                                <span>{product.view_cnt}</span>
+                            </div>
+                            <div className="flex items-center gap-1">
+                                <Heart className="w-4 h-4" />
+                                <span>{product.likes_cnt}</span>
+                            </div>
                         </div>
                     </div>
                 </div>
