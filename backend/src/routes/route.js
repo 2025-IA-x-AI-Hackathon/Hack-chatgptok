@@ -8,7 +8,7 @@ import uploadController from '../controllers/uploadController.js';
 import notificationController from '../controllers/notificationController.js';
 
 // middleware
-import { authenticateToken } from '../middleware/authMiddleware.js';
+import { authenticateToken, optionalAuthenticateToken } from '../middleware/authMiddleware.js';
 
 const router = express.Router();
 
@@ -866,7 +866,7 @@ router.get('/products', productController.getProductList);
  *                   type: string
  *                   example: 상품 조회 중 오류가 발생했습니다.
  */
-router.get('/products/:productId', productController.getProductById);
+router.get('/products/:productId', optionalAuthenticateToken, productController.getProductById);
 
 /**
  * @swagger

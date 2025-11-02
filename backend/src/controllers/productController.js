@@ -208,9 +208,12 @@ const ProductController = {
             // 좋아요 여부 확인 (인증된 사용자만)
             let isLiked = false;
             const memberId = req.user?.memberId;
+            logger.info('[Product] 좋아요 여부 확인 요청 시작', { user: req.user });
+            logger.info('[Product] 좋아요 여부 확인 요청 시작', { productId, memberId });
             if (memberId) {
                 try {
                     isLiked = await ProductModel.isLiked(productId, memberId);
+                    logger.info('[Product] 좋아요 여부 확인 성공', { productId, memberId, isLiked });
                 } catch (error) {
                     logger.error('[Product] 좋아요 여부 확인 실패', error, { productId, memberId });
                     isLiked = false;
